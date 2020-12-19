@@ -229,9 +229,9 @@ initCanvas().then(render => render((ctx, {sheet, delta, now}) => {
   }
 }));
 
-// get the current user's audio stream
-function getAudioStream() {
-  return navigator.mediaDevices.getUserMedia({audio: true});
+// get the current user's stream
+function getStream() {
+  return navigator.mediaDevices.getUserMedia({audio: true, video: true});
 }
 
 // split an audio stream into left and right channels
@@ -289,8 +289,8 @@ class StreamSplit {
   }
 }
 
-// play an audio stream
-function playAudioStream(stream, target) {
+// play stream
+function playStream(stream, target) {
   // create the video element for the stream
   const elem = document.createElement('video');
   elem.srcObject = stream;
@@ -315,7 +315,7 @@ function initPeer() {
   // run when someone calls us. answer the call
   peer.on('call', async call => {
     log('call from', call.peer);
-    call.answer(await getAudioStream());
+    call.answer(await getStream());
     receiveCall(call);
   });
 }
@@ -323,7 +323,7 @@ function initPeer() {
 // start a call with target
 async function startCall(target) {
   if (!peer) return;
-  const call = peer.call(target, await getAudioStream());
+  const call = peer.call(target, await getStream());
   receiveCall(call);
 }
 
@@ -334,12 +334,11 @@ function receiveCall(call) {
     const player = players.find(p => p.id === call.peer);
     if (!player) {
       console.log('couldn\'t find player for stream', call.peer);
-    } else {
+    } else if (player.stream == null) {
       player.stream = new StreamSplit(stream, {left: 1, right: 1});
-      playAudioStream(stream, call.peer);
+      playStream(stream, call.peer);
       log('created stream for', call.peer);
     }
-    // playAudioStream(stream, call.peer);
   });
 }
 
