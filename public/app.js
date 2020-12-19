@@ -241,6 +241,7 @@ class StreamSplit {
 
     // create audio context using the stream as a source
     const track = stream.getAudioTracks()[0];
+    var AudioContext = window.AudioContext || window.webkitAudioContext;
     this.context = new AudioContext();
     this.source = this.context.createMediaStreamSource(new MediaStream([track]));
 
