@@ -67,7 +67,7 @@ const users = [];
 // handle socket connection
 io.on('connection', socket => {
   const id = uuidv4();
-  const pos = {x: 0, y: 0};
+  const pos = {x: 100, y: 100};
   users.push({ id, socket, pos });
   console.log('user connected', id);
 
@@ -88,6 +88,12 @@ io.on('connection', socket => {
   socket.on('pos', (x, y) => {
     // ignore non-number input
     if (typeof x !== 'number' || typeof y !== 'number') return;
+
+    const index = users.findIndex(u => u.id === id);
+    if (index !== -1) {
+      users[index].pos.x = x;
+      users[index].pos.y = y;
+    }
 
     // emit the position, throttled
     emitPos(x, y);
