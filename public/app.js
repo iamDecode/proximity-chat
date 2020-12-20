@@ -43,10 +43,15 @@ class Player extends PIXI.Sprite {
     this.goal = goal
 
     // PIXI setup
+    const circle = new PIXI.Graphics();
+    this.addChild(circle);
+    this.mask = circle;
+
     this.anchor.set(0.5);
     this.x = goal.x;
     this.y = goal.y;
-    this.setSize(80, 80);
+    this.size = 80
+    this.setSize(this.size, this.size);
 
     viewport.addChild(this)
   }
@@ -57,13 +62,12 @@ class Player extends PIXI.Sprite {
 
     const size = Math.min(width, height);
 
-    this.removeChild(this.mask);
-    const circle = new PIXI.Graphics();
-    circle.beginFill(0xffffff);
-    circle.drawEllipse(0, 0, size/(2*this.scale.x), size/(2*this.scale.y));
-    circle.endFill();
-    this.addChild(circle);
-    this.mask = circle;
+    this.mask.clear();
+    this.mask.beginFill(0xffffff);
+    this.mask.drawEllipse(0, 0, size/(2*this.scale.x), size/(2*this.scale.y));
+    this.mask.endFill();
+
+    this._originalScale = [this.scale.x, this.scale.y];
   }
 
   addVideo(element) {
@@ -78,11 +82,11 @@ class Player extends PIXI.Sprite {
 
         let width, height;
         if (texture.width > texture.height) {
-          width = 80 * (texture.width/texture.height)
-          height = 80
+          width = this.size * (texture.width/texture.height)
+          height = this.size
         } else {
-          height = 80 * (texture.height/texture.width)
-          width = 80
+          height = this.size * (texture.height/texture.width)
+          width = this.size
         }
         this.setSize(width, height)
       }, 100)
@@ -92,9 +96,15 @@ class Player extends PIXI.Sprite {
   setPosition(x, y) {
     this.x = x;
     this.y = y;
+
+    const [left, right] = calcVolumes({x: selfPlayer.x, y: selfPlayer.y}, {x: this.x, y: this.y})
+    this.stream.setVolume(left, right);
+
+    let scalar = (Math.max(left, right) * (1 - 0.5)) + 0.5;
+    this.scale.set(this._originalScale[0] * scalar, this._originalScale[1] * scalar)
   }
 
-  // updatePosiapption() {
+  // updatePosition() {
   //   const speed = 25
   //   const delta = app.ticker.elapsedMS / 1000;
   //   this.position.x += (this.goal.x - this.position.x) * speed * delta;
@@ -131,17 +141,27 @@ class SelfPlayer extends Player {
     this.sendPos = throttle((x, y) => socket.emit('pos', x, y), 25);
   }
 
-  updatePosition() {
+  setPosition(x, y) {
+    this.x = x;
+    this.y = y;
+    this.sendPos(this.x, this.y);
+
+    players.forEach(player => {
+      player.setPosition(player.x, player.y);
+    })
   }
 
+  // updatePosition() {
+
+  // }
+
   onDragStart(event) {
+    event.stopPropagation()
     this.data = event.data;
-    this.alpha = 0.5;
     this.dragging = true;
   }
 
   onDragEnd() {
-    this.alpha = 1;
     this.dragging = false;
     this.data = null;
   }
@@ -150,9 +170,7 @@ class SelfPlayer extends Player {
     if (!this.dragging) { return }
     event.stopPropagation()
     const newPosition = this.data.getLocalPosition(this.parent);
-    this.x = newPosition.x;
-    this.y = newPosition.y;
-    this.sendPos(this.x, this.y)
+    this.setPosition(newPosition.x, newPosition.y);
   } 
 }
 
@@ -162,8 +180,8 @@ class SelfPlayer extends Player {
 
 const $ = document.querySelector.bind(document);
 const log = (...args) => logs.innerText += args.join(' ') + '\n';
-const SOUND_CUTOFF_RANGE = 100;
-const SOUND_NEAR_RANGE = 10;
+const SOUND_CUTOFF_RANGE = 250;
+const SOUND_NEAR_RANGE = 80;
 
 const socket = io();
 
