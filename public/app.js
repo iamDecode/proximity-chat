@@ -44,6 +44,9 @@ class Player extends PIXI.Sprite {
     this.goal = goal
 
     // PIXI setup
+    this.border = new PIXI.Graphics();
+    this.addChild(this.border);
+
     const circle = new PIXI.Graphics();
     this.addChild(circle);
     this.mask = circle;
@@ -62,11 +65,16 @@ class Player extends PIXI.Sprite {
     this.height = height;
 
     const size = Math.min(width, height);
+    const radius = size / (2 * this.scale.x);
 
     this.mask.clear();
     this.mask.beginFill(0xffffff);
-    this.mask.drawEllipse(0, 0, size/(2*this.scale.x), size/(2*this.scale.y));
+    this.mask.drawCircle(0, 0, radius);
     this.mask.endFill();
+
+    this.border.clear();
+    this.border.lineStyle(radius * 0.05, 0xffffff, 1, 0)
+    this.border.arc(0, 0, radius, 0, 2*Math.PI)
 
     this._originalScale = [this.scale.x, this.scale.y];
   }
