@@ -120,10 +120,12 @@ class Player extends PIXI.Sprite {
     this.x = x;
     this.y = y;
 
-    const [left, right] = calcVolumes({x: selfPlayer.x, y: selfPlayer.y}, {x: this.x, y: this.y})
+    let [left, right] = calcVolumes({x: selfPlayer.x, y: selfPlayer.y}, {x: this.x, y: this.y})
+    left = (left * (1 - 0.5)) + 0.5;    
+    right = (right * (1 - 0.5)) + 0.5;
     if (this.stream != null) this.stream.setVolume(left, right);
 
-    let scalar = (Math.max(left, right) * (1 - 0.5)) + 0.5;
+    const scalar = Math.max(left, right);
     this.scale.set(this._originalScale[0] * scalar, this._originalScale[1] * scalar)
   }
 
