@@ -7,6 +7,13 @@ const app = new PIXI.Application({
   autoResize: true
 })
 
+const stats = new Stats();
+document.body.appendChild(stats.dom);
+app.ticker.add(_ => {
+  stats.end()
+  stats.begin()
+})
+
 // create viewport
 const viewport = new Viewport.Viewport({
     screenWidth: window.innerWidth,
