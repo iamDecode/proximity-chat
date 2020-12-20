@@ -89,12 +89,6 @@ io.on('connection', socket => {
     // ignore non-number input
     if (typeof x !== 'number' || typeof y !== 'number') return;
 
-    // clamp pos
-    x = Math.max(Math.min(200, x), -200);
-    y = Math.max(Math.min(200, y), -200);
-    pos.x = x;
-    pos.y = y;
-
     // emit the position, throttled
     emitPos(x, y);
   });

@@ -1,16 +1,23 @@
 <!DOCTYPE html>
 <html>
   <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+
     <title>proximity voice demo</title>
+    
     <link rel="stylesheet" type="text/css" href="public/style.css">
     <script src="/socket.io/socket.io.js"></script>
-    <script src="https://unpkg.com/peerjs@1.3.1/dist/peerjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.3.1/peerjs.min.js" integrity="sha512-wNUAk/IKoDcVSiKiN/0ormRTzENc9IbFdHa/BWNuLPtp2kG53TLf5dobOeCHoeafnlaSfjKAiSewS6AJspm/Iw==" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/5.3.5/pixi.min.js" integrity="sha512-pvaRB8jruTRSGAEqLCMv/KgUWQdtjZZYJM70cGH5c9RnBodhcyeMn4fNSg3EP3aGbu3CYG38N7eyEXsJWoMZKA==" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/pixi-viewport@4.18.1/dist/viewport.min.js"></script>
   </head>
   <body>
     <canvas id="canvas"></canvas>
+    
     <div class="audiostream-container">
     </div>
     <pre id="logs"></pre>
+    
     <script src="public/app.js"></script>
   </body>
 </html>

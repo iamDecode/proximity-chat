@@ -1,6 +1,167 @@
+const app = new PIXI.Application({
+  view: document.querySelector('canvas'),
+  width: window.innerWidth,
+  height: window.innerHeight,
+  antialias: true,
+  resolution: window.devicePixelRatio,
+  autoResize: true
+})
+
+// create viewport
+const viewport = new Viewport.Viewport({
+    screenWidth: window.innerWidth,
+    screenHeight: window.innerHeight,
+    worldWidth: 3200,
+    worldHeight: 1800,
+    interaction: app.renderer.plugins.interaction
+})
+
+// add the viewport to the stage
+app.stage.addChild(viewport)
+
+// activate plugins
+viewport
+    .drag()
+    .pinch()
+    .wheel()
+    .clamp({direction: 'all'})
+    .clampZoom({maxWidth: 3200, maxHeight: 1800})
+
+// add a red box
+const sprite = viewport.addChild(new PIXI.Sprite.from('public/assets/room.png'))
+
+
+
+
+class Player extends PIXI.Sprite {
+  constructor(id, avatar, pos, goal) {
+    super(PIXI.Texture.WHITE);
+
+    this.id = id
+    this.avatar = avatar
+    this.pos = pos
+    this.goal = goal
+
+    // PIXI setup
+    this.anchor.set(0.5);
+    this.x = goal.x;
+    this.y = goal.y;
+    this.setSize(80, 80);
+
+    viewport.addChild(this)
+  }
+
+  setSize(width, height) {
+    this.width = width;
+    this.height = height;
+
+    const size = Math.min(width, height);
+
+    this.removeChild(this.mask);
+    const circle = new PIXI.Graphics();
+    circle.beginFill(0xffffff);
+    circle.drawEllipse(0, 0, size/(2*this.scale.x), size/(2*this.scale.y));
+    circle.endFill();
+    this.addChild(circle);
+    this.mask = circle;
+  }
+
+  addVideo(element) {
+    element.addEventListener('resize', e => {
+      const texture = PIXI.Texture.from(element);
+      this.texture = null
+
+      setTimeout(_ => {
+        this.texture = texture;
+
+        console.log("size changed to", texture.width, texture.height)
+
+        let width, height;
+        if (texture.width > texture.height) {
+          width = 80 * (texture.width/texture.height)
+          height = 80
+        } else {
+          height = 80 * (texture.height/texture.width)
+          width = 80
+        }
+        this.setSize(width, height)
+      }, 100)
+    })
+  }
+
+  setPosition(x, y) {
+    this.x = x;
+    this.y = y;
+  }
+
+  // updatePosiapption() {
+  //   const speed = 25
+  //   const delta = app.ticker.elapsedMS / 1000;
+  //   this.position.x += (this.goal.x - this.position.x) * speed * delta;
+  //   this.position.y += (this.goal.y - this.position.y) * speed * delta;
+  // }
+
+  // render(renderer) {
+  //   this.updatePosition()
+  //   super.render(renderer)
+  // }
+}
+
+class SelfPlayer extends Player {
+ constructor(id, avatar, pos, goal) {
+    super(id, avatar, pos, goal);
+
+    this.tint = 0xff0000
+    this.interactive = true
+    this.buttonMode = true
+
+    this
+      // events for drag start
+      .on('mousedown', this.onDragStart)
+      .on('touchstart', this.onDragStart)
+      // events for drag end
+      .on('mouseup', this.onDragEnd)
+      .on('mouseupoutside', this.onDragEnd)
+      .on('touchend', this.onDragEnd)
+      .on('touchendoutside', this.onDragEnd)
+      // events for drag move
+      .on('mousemove', this.onDragMove)
+      .on('touchmove', this.onDragMove);
+
+    this.sendPos = throttle((x, y) => socket.emit('pos', x, y), 25);
+  }
+
+  updatePosition() {
+  }
+
+  onDragStart(event) {
+    this.data = event.data;
+    this.alpha = 0.5;
+    this.dragging = true;
+  }
+
+  onDragEnd() {
+    this.alpha = 1;
+    this.dragging = false;
+    this.data = null;
+  }
+
+  onDragMove(event) {
+    if (!this.dragging) { return }
+    event.stopPropagation()
+    const newPosition = this.data.getLocalPosition(this.parent);
+    this.x = newPosition.x;
+    this.y = newPosition.y;
+    this.sendPos(this.x, this.y)
+  } 
+}
+
+
+
+
+
 const $ = document.querySelector.bind(document);
 const log = (...args) => logs.innerText += args.join(' ') + '\n';
-const GAME_SIZE = 400;
 const SOUND_CUTOFF_RANGE = 100;
 const SOUND_NEAR_RANGE = 10;
 
@@ -28,74 +189,9 @@ const throttle = (func, limit) => {
   }
 }
 
-// setup a spritesheet parser
-function initSpritesheet(src, size) {
-  // create the image using the given source
-  const img = new Image();
-  img.src = src;
+const selfPlayer = new SelfPlayer("self", 0, {x:100, y:100}, {x:100, y:100});
+const players = []; // TODO: should be a hashmap for fast lookup.
 
-  // handler to render a single sprite from the spritesheet
-  const draw = (tx, ty) => (ctx, {x=0, y=0, rot=0, flipH=false, flipV=false}) => {
-    if (ctx.rot !== 0 || ctx.flipH || ctx.flipV) {
-      ctx.save();
-      ctx.translate(x, y);
-      ctx.scale(flipH ? -1 : 1, flipV ? -1 : 1);
-      if (rot !== 0)
-        ctx.rotate(rot);
-      ctx.drawImage(img, tx * size, ty * size, size, size, - size/2, - size/2, size, size);
-      ctx.restore();
-    } else {
-      ctx.drawImage(img, tx * size, ty * size, size, size, x - size/2, y - size/2, size, size);
-    }
-  };
-
-  // resolve when the image has loaded
-  return new Promise((resolve, reject) =>{
-    img.onload = () => resolve(draw);
-    img.onerror = reject;
-  })
-}
-
-// setup a canvas
-async function initCanvas() {
-  const sheet = await initSpritesheet('public/spritesheet.png', 16);
-  const canvas = $('#canvas');
-  const ctx = canvas.getContext('2d');
-  ctx.canvas.width = GAME_SIZE;
-  ctx.canvas.height = GAME_SIZE;
-
-  return fn => {
-    let last = Date.now();
-
-    // render loop
-    function render() {
-      // calculate time between frames (delta time)
-      const now = Date.now();
-      const delta = (now - last)/1000;
-      last = now;
-
-      // draw background
-      ctx.fillStyle = '#111';
-      ctx.fillRect(0, 0, GAME_SIZE, GAME_SIZE);
-      ctx.save();
-      ctx.translate(GAME_SIZE/2, GAME_SIZE/2);
-
-      // run the passed in render fn
-      fn(ctx, {sheet, delta, now});
-
-      ctx.restore();
-
-      window.requestAnimationFrame(render);
-    };
-
-    window.requestAnimationFrame(render);
-  };
-}
-
-const myPos = {x: 0, y: 0};
-const lastPos = {x: 0, y: 0};
-const cursor = {down: false, x: 0, y: 0};
-const players = [];
 
 function calcVolumes(listenerPos, soundPos) {
   // calulate angle and distance from listener to sound
@@ -119,115 +215,6 @@ function calcVolumes(listenerPos, soundPos) {
     (Math.pow((cos > 0 ? cos : 0), 2) + Math.pow(sin, 2)) * scale,
   ];
 }
-
-// mouse and touch events
-const mouseUpEvent = e => {
-  e.preventDefault();
-  cursor.down = false;
-};
-
-$('#canvas').addEventListener('mousedown', e => {
-  e.preventDefault();
-  cursor.down = true;
-  cursor.x = e.offsetX;
-  cursor.y = e.offsetY;
-});
-
-$('#canvas').addEventListener('mousemove', e => {
-  cursor.x = e.offsetX;
-  cursor.y = e.offsetY;
-})
-
-$('#canvas').addEventListener('mouseup', mouseUpEvent);
-
-$('#canvas').addEventListener('touchstart', e => {
-  e.preventDefault();
-  cursor.down = true;
-  if (e.touches.length === 1) {
-    const rect = e.target.getBoundingClientRect();
-    cursor.x = e.touches[0].pageX - rect.left;
-    cursor.y = e.touches[0].pageY - rect.top;
-  }
-});
-
-$('#canvas').addEventListener('touchmove', e => {
-  if (e.touches.length === 1) {
-    const rect = e.target.getBoundingClientRect();
-    cursor.x = e.touches[0].pageX - rect.left;
-    cursor.y = e.touches[0].pageY - rect.top;
-  }
-})
-
-$('#canvas').addEventListener('touchend', mouseUpEvent);
-$('#canvas').addEventListener('touchcancel', mouseUpEvent);
-
-// emit my position, throttled
-const sendPos = throttle((x, y) => socket.emit('pos', x, y), 25);
-function emitPos() {
-  if (lastPos.x !== myPos.x && lastPos.y !== myPos.y) {
-    sendPos(myPos.x, myPos.y);
-    lastPos.x = myPos.x;
-    lastPos.y = myPos.y;
-  }
-}
-
-// render the canvas
-initCanvas().then(render => render((ctx, {sheet, delta, now}) => {
-
-  // where player should try to move to (cursor if mouse/touch is down)
-  const goalX = !cursor.down ? myPos.x : (cursor.x - GAME_SIZE/2);
-  const goalY = !cursor.down ? myPos.y : (cursor.y - GAME_SIZE/2);
-
-  // move player towards cursor
-  if (Math.hypot(goalX - myPos.x, goalY - myPos.y) > 1) {
-    const theta = Math.atan2(goalY - myPos.y, goalX - myPos.x);
-    myPos.x += Math.cos(theta) * 128 * delta;
-    myPos.y += Math.sin(theta) * 128 * delta;
-  } else {
-    myPos.x = Math.round(myPos.x);
-    myPos.y = Math.round(myPos.y);
-  }
-
-  emitPos();
-
-  // render my player
-  sheet(25, 0)(ctx, {x: myPos.x, y: myPos.y});
-
-  // render cursor
-  if (cursor.down)
-    sheet(20, 14)(ctx, {x: goalX, y: goalY});
-
-  // render other players
-  for (const p of players) {
-    // smoothly interpolate player position towards the goal position
-    p.pos.x += (p.goal.x - p.pos.x) * 5 * delta;
-    p.pos.y += (p.goal.y - p.pos.y) * 5 * delta;
-
-    // render the player
-    sheet(25, 0)(ctx, {
-      x: p.pos.x,
-      y: p.pos.y,
-    });
-
-    if (p.stream) {
-      // console.log(calcVolumes(myPos, p.pos));
-      const [left, right] = calcVolumes(myPos, p.pos);
-      ctx.lineWidth = 4;
-      ctx.beginPath();
-      ctx.strokeStyle = '#00f';
-      ctx.moveTo(p.pos.x - 10, p.pos.y);
-      ctx.lineTo(p.pos.x - 10,p.pos.y - 30 * left);
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.strokeStyle = '#f00';
-      ctx.moveTo(p.pos.x + 10, p.pos.y);
-      ctx.lineTo(p.pos.x + 10,p.pos.y - 30 * right);
-      ctx.stroke();
-      p.stream.setVolume(left, right);
-    }
-
-  }
-}));
 
 // get the current user's stream
 function getStream() {
@@ -298,8 +285,9 @@ function playStream(stream, target) {
   elem.setAttribute('data-peer', target);
   elem.onloadedmetadata = () => elem.play();
 
-  // add it to the stream container
-  $('.audiostream-container').appendChild(elem);
+  // add it to the player
+  const player = players.find(p => p.id === target);
+  player.addVideo(elem);
 }
 
 let id, peer;
@@ -359,26 +347,25 @@ socket.on('id', async connId => {
 // talk to any user who joins
 socket.on('join', (target, pos) => {
   log('calling', target);
-  players.push({ id: target, avatar: 0, pos, goal: {x: pos.x, y: pos.y}});
+  players.push(new Player(target, 0, pos, {x: pos.x, y: pos.y}));
   startCall(target);
 });
 
 socket.on('players', existingPlayers => {
   for (const p of existingPlayers) {
-    players.push({
-      id: p.id,
-      avatar: 0,
-      pos: p.pos,
-      goal: {x: p.pos.x, y: p.pos.y},
-    });
+    players.push(new Player(
+      p.id,
+      0,
+      p.pos,
+      {x: p.pos.x, y: p.pos.y}
+    ));
   }
 });
 
 socket.on('pos', (id, pos) => {
   const player = players.find(p => p.id === id);
   if (player) {
-    player.goal.x = pos.x;
-    player.goal.y = pos.y;
+    player.setPosition(pos.x, pos.y);
   }
 });
 
