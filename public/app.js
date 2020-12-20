@@ -25,7 +25,8 @@ viewport
     .pinch()
     .wheel()
     .clamp({direction: 'all'})
-    .clampZoom({maxWidth: 3200, maxHeight: 1800})
+    .clampZoom({maxWidth: 3200, maxHeight: 1800, minWidth: 400})
+    .setZoom(0.8)
 
 // add a red box
 const sprite = viewport.addChild(new PIXI.Sprite.from('public/assets/room.png'))
@@ -50,7 +51,7 @@ class Player extends PIXI.Sprite {
     this.anchor.set(0.5);
     this.x = goal.x;
     this.y = goal.y;
-    this.size = 80
+    this.size = 100
     this.setSize(this.size, this.size);
 
     viewport.addChild(this)
@@ -89,7 +90,7 @@ class Player extends PIXI.Sprite {
           width = this.size
         }
         this.setSize(width, height)
-        
+
         if (!(this instanceof SelfPlayer)) {
           this.setPosition(this.x, this.y); // To recompute size
         }
@@ -189,8 +190,8 @@ class SelfPlayer extends Player {
 
 const $ = document.querySelector.bind(document);
 const log = (...args) => logs.innerText += args.join(' ') + '\n';
-const SOUND_CUTOFF_RANGE = 250;
-const SOUND_NEAR_RANGE = 80;
+const SOUND_CUTOFF_RANGE = 500;
+const SOUND_NEAR_RANGE = 300;
 
 const socket = io();
 
