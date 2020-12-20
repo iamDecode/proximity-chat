@@ -73,10 +73,11 @@ class Player extends PIXI.Sprite {
 
   addVideo(element) {
     element.addEventListener('resize', e => {
-      const texture = PIXI.Texture.from(element);
+      app.ticker.stop()
       this.texture = null
 
       setTimeout(_ => {
+        const texture = PIXI.Texture.from(element);
         this.texture = texture;
 
         console.log("size changed to", texture.width, texture.height)
@@ -94,7 +95,8 @@ class Player extends PIXI.Sprite {
         if (!(this instanceof SelfPlayer)) {
           this.setPosition(this.x, this.y); // To recompute size
         }
-      }, 100)
+        app.ticker.start()
+      }, 100) // FIXME: This is a terrible hack.
     })
   }
 
