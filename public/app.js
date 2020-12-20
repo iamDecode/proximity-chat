@@ -63,7 +63,7 @@ class Player extends PIXI.Sprite {
     this.x = goal.x;
     this.y = goal.y;
     this.size = 100
-    this.setSize(this.size, this.size);
+    this.setSize(this.size * 0.5, this.size * 0.5);
 
     viewport.addChild(this)
   }
