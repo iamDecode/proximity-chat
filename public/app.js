@@ -27,6 +27,7 @@ viewport
     .clamp({direction: 'all'})
     .clampZoom({maxWidth: 3200, maxHeight: 1800, minWidth: 400})
     .setZoom(0.8)
+    .decelerate({friction: 0.93})
 
 // add a red box
 const sprite = viewport.addChild(new PIXI.Sprite.from('public/assets/room.png'))
