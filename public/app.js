@@ -389,12 +389,10 @@ socket.on('pos', (id, pos) => {
 
 socket.on('leave', target => {
   log('call dropped from', target);
-  const elem = $(`[data-peer="${target}"]`);
-  if (elem) elem.remove();
-
   // remove player from players list
   const index = players.findIndex(p => p.id === target);
   if (index > -1) {
+    viewport.removeChild(players[index])
     // close the stream
     if (players[index].stream)
       players[index].stream.close();
