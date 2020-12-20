@@ -121,7 +121,6 @@ class SelfPlayer extends Player {
  constructor(id, avatar, pos, goal) {
     super(id, avatar, pos, goal);
 
-    this.tint = 0xff0000
     this.interactive = true
     this.buttonMode = true
 
@@ -139,6 +138,12 @@ class SelfPlayer extends Player {
       .on('touchmove', this.onDragMove);
 
     this.sendPos = throttle((x, y) => socket.emit('pos', x, y), 25);
+
+    const initStream = async _ => {
+      const stream = await getStream();
+      playStream(stream, selfPlayer);
+    }
+    initStream()
   }
 
   setPosition(x, y) {
@@ -304,8 +309,12 @@ function playStream(stream, target) {
   elem.onloadedmetadata = () => elem.play();
 
   // add it to the player
-  const player = players.find(p => p.id === target);
-  player.addVideo(elem);
+  if (target instanceof Player && target.stream == null) {
+    target.addVideo(elem);
+  } else {
+    const player = players.find(p => p.id === target);
+    player.addVideo(elem);
+  }
 }
 
 let id, peer;
