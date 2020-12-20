@@ -1,9 +1,13 @@
 html, body {
   margin: 0;
+  overflow: hidden;
 }
 
 .audiostream-container {
   padding: 14px;
+  position: absolute;
+  bottom: 0;
+  left: 0;
 }
 
 video {
@@ -14,14 +18,10 @@ video {
   margin: 4px;
 }
 
-canvas {
-  width: 400px;
-  height: 400px;
-  margin: 16px;
-}
-
 pre {
-  padding: 14px;
+  color: white;
+  position: absolute;
+  bottom: 0;
+  right: 0;
   margin: 0;
-  border-top: 1px solid black;
 }
