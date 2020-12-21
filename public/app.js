@@ -162,7 +162,10 @@ class SelfPlayer extends Player {
       .on('mousemove', this.onDragMove)
       .on('touchmove', this.onDragMove);
 
-    this.sendPos = throttle((x, y) => socket.emit('pos', x, y), 25);
+    this.sendPos = throttle((id, x, y) => {
+      const data = JSON.stringify({id: id, pos: {x: x, y: y}})
+      socket.send(data)
+    }, 25);
 
     const initStream = async _ => {
       const stream = await getStream();
@@ -174,7 +177,7 @@ class SelfPlayer extends Player {
   setPosition(x, y) {
     this.x = x;
     this.y = y;
-    this.sendPos(this.x, this.y);
+    this.sendPos(this.id, this.x, this.y);
 
     players.forEach(player => {
       player.setPosition(player.x, player.y);
@@ -213,7 +216,7 @@ const log = (...args) => logs.innerText += args.join(' ') + '\n';
 const SOUND_CUTOFF_RANGE = 500;
 const SOUND_NEAR_RANGE = 300;
 
-const socket = io();
+const socket = new WebSocket(`wss://${location.hostname}:9001`);
 
 // throttle a function
 const throttle = (func, limit) => {
@@ -237,7 +240,7 @@ const throttle = (func, limit) => {
   }
 }
 
-const selfPlayer = new SelfPlayer("self", 0, {x:100, y:100}, {x:100, y:100});
+let selfPlayer;
 const players = []; // TODO: should be a hashmap for fast lookup.
 
 
@@ -343,11 +346,11 @@ function playStream(stream, target) {
   }
 }
 
-let id, peer;
+let peer;
 
 // create peer, setup handlers
 function initPeer() {
-  peer = new Peer(id, {host: location.hostname, port: location.port, path: '/peerjs'});
+  peer = new Peer(selfPlayer.id, {host: location.hostname, port: location.port, path: '/peerjs'});
 
   peer.on('open', id => { log('My peer ID is:', id); });
   peer.on('disconnected', id => { log('lost connection'); });
@@ -383,54 +386,61 @@ function receiveCall(call) {
   });
 }
 
-// setup peer when user receives id
-socket.on('id', async connId => {
-  // this only happens if we lose connection with the server
-  if (id) {
-    log('destroying old identity', id, 'and replacing with', connId);
-    peer.destroy();
-    peer = undefined;
-    return;
+
+socket.onmessage = async (message) => {
+  const data = JSON.parse(message.data)
+
+  // setup peer when user receives id
+  if ('id' in data) {
+    if (selfPlayer != null) {
+      log('destroying old identity', selfPlayer.id, 'and replacing with', data.id);
+      peer.destroy();
+      peer = undefined;
+      return;
+    }
+
+    selfPlayer = new SelfPlayer(data.id, 0, {x:100, y:100}, {x:100, y:100})
+    initPeer();
+  } 
+
+  // Populate existing players
+  else if ('players' in data) {
+    for (const p of data.players) {
+      players.push(new Player(
+        p.id,
+        0,
+        p.pos,
+        {x: p.pos.x, y: p.pos.y}
+      ));
+    }
   }
 
-  id = connId;
-  initPeer();
-});
-
-// talk to any user who joins
-socket.on('join', (target, pos) => {
-  log('calling', target);
-  players.push(new Player(target, 0, pos, {x: pos.x, y: pos.y}));
-  startCall(target);
-});
-
-socket.on('players', existingPlayers => {
-  for (const p of existingPlayers) {
-    players.push(new Player(
-      p.id,
-      0,
-      p.pos,
-      {x: p.pos.x, y: p.pos.y}
-    ));
+  // talk to any user who joins
+  else if ('join' in data) {
+    log('calling', data.join.id);
+    players.push(new Player(data.join.id, 0, data.join.pos, data.join.pos));
+    startCall(data.join.id);
   }
-});
 
-socket.on('pos', (id, pos) => {
-  const player = players.find(p => p.id === id);
-  if (player) {
-    player.setPosition(pos.x, pos.y);
+  // update player position
+  else if ('position' in data) {
+    const player = players.find(p => p.id === data.position.id);
+    if (player) {
+      player.setPosition(data.position.pos.x, data.position.pos.y);
+    }
   }
-});
 
-socket.on('leave', target => {
-  log('call dropped from', target);
-  // remove player from players list
-  const index = players.findIndex(p => p.id === target);
-  if (index > -1) {
-    viewport.removeChild(players[index])
-    // close the stream
-    if (players[index].stream)
-      players[index].stream.close();
-    players.splice(index, 1)
-  };
-});
+  // remove players who left or disconnected
+  else if ('leave' in data) {
+    log('call dropped from', data.leave.id);
+    // remove player from players list
+    const index = players.findIndex(p => p.id === data.leave.id);
+    if (index > -1) {
+      viewport.removeChild(players[index])
+      // close the stream
+      if (players[index].stream)
+        players[index].stream.close();
+      players.splice(index, 1)
+    };
+  }
+};
