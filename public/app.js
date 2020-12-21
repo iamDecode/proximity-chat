@@ -33,7 +33,6 @@ viewport
     .wheel()
     .clamp({direction: 'all'})
     .clampZoom({maxWidth: 3200, maxHeight: 1800, minHeight: 250})
-    .setZoom(0.8)
     .decelerate({friction: 0.93})
 
 // add a red box
@@ -62,7 +61,7 @@ class Player extends PIXI.Sprite {
     this.anchor.set(0.5);
     this.x = goal.x;
     this.y = goal.y;
-    this.size = 100
+    this.size = 125
     this.setSize(this.size * 0.5, this.size * 0.5);
 
     viewport.addChild(this)
@@ -81,7 +80,7 @@ class Player extends PIXI.Sprite {
     this.mask.endFill();
 
     this.border.clear();
-    this.border.lineStyle(radius * 0.05, 0xffffff, 1, 0)
+    this.border.lineStyle(radius * 0.04, 0xffffff, 1, 0)
     this.border.arc(0, 0, radius, 0, 2*Math.PI)
 
     this._originalScale = [this.scale.x, this.scale.y];
