@@ -25,3 +25,80 @@ pre {
   right: 0;
   margin: 0;
 }
+
+nav {
+  position: absolute;
+  bottom: 20px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  z-index: 999;
+}
+
+.material-icons {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    vertical-align: middle;
+}
+
+nav ul {
+  background:rgba(255, 255, 255, 0.5);
+  border-radius: 25px;
+  list-style: none;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  margin: 0 auto;
+  padding: 0 10px;
+  height: 50px;
+  box-shadow: 0 0 25px rgba(40, 47, 60, .05), 0 20px 25px rgba(40, 47, 60, .05), 0 3px 4px rgba(40, 47, 60, .05);
+}
+
+@supports (-webkit-appearance: none) {
+  nav ul {
+    -webkit-backdrop-filter: saturate(180%) blur(10px);
+    backdrop-filter: saturate(180%) blur(10px);
+    /*background:rgba(0, 0, 0, 0.5)*/
+    background:rgba(255, 255, 255, 0.3);
+  }
+}
+
+nav ul li {
+  display: block;
+  margin: 0;
+  padding: 0;
+}
+
+nav ul li button {
+  background: none;
+  border: none;
+  margin: 0 10px;
+  width: 30px;
+  height: 30px;
+  border-radius: 15px;
+  padding: 0;
+  outline: none;
+  color: white;
+}
+
+nav ul li button:hover {
+  background: rgba(255,255,255,0.1);
+}
+
+nav ul li button:active {
+  background: rgba(255,255,255,0.3);
+}
+
+
+nav ul li button.disabled {
+  color: #fb4f65;
+}
+
+nav ul li button.disabled:hover {
+  background: rgba(255,128,144,0.15);
+}
+
+nav ul li button.disabled:active {
+  background: rgba(255,128,144,0.35);
+}
