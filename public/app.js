@@ -163,8 +163,7 @@ class SelfPlayer extends Player {
       .on('touchmove', this.onDragMove);
 
     this.sendPos = throttle((id, x, y) => {
-      const data = JSON.stringify({id: id, pos: {x: x, y: y}})
-      socket.send(data)
+      socket.send([id, Math.round(x), Math.round(y)])
     }, 25);
 
     const initStream = async _ => {
@@ -388,7 +387,12 @@ function receiveCall(call) {
 
 
 socket.onmessage = async (message) => {
-  const data = JSON.parse(message.data)
+  let data;
+  if (message.data[0] == "{") {
+    data = JSON.parse(message.data)
+  } else {
+    data = {position: message.data.split(',')}
+  }
 
   // setup peer when user receives id
   if ('id' in data) {
@@ -424,9 +428,9 @@ socket.onmessage = async (message) => {
 
   // update player position
   else if ('position' in data) {
-    const player = players.find(p => p.id === data.position.id);
+    const player = players.find(p => p.id === data.position[0]);
     if (player) {
-      player.setPosition(data.position.pos.x, data.position.pos.y);
+      player.setPosition(data.position[1], data.position[2]);
     }
   }
 

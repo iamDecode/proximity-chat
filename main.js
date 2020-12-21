@@ -7,8 +7,6 @@ const { ExpressPeerServer } = require('peer');
 const { v4: uuidv4 } = require('uuid');
 
 const uws = require('uWebSockets.js');
-const { StringDecoder } = require('string_decoder');
-const decoder = new StringDecoder('utf8');
 
 // setup ssl
 const certFile = './cert.pem'
@@ -98,19 +96,19 @@ const usocket = uws.SSLApp({key_file_name: keyFile, cert_file_name: certFile}).w
 
     const user = { id, ws, pos };
     user.emitPos = throttle((x, y) => {
-      usocket.publish('position', JSON.stringify({position: {id: id, pos: {x: x, y: y}}}));
+      usocket.publish('position', String([id, x, y]));
     }, 25);
 
     users.push(user);
   },
   message: (ws, message, isBinary) => {
-    let json = JSON.parse(decoder.write(Buffer.from(message)));
-
-    const index = users.findIndex(u => u.id === json.id);
+    const [id, x, y] = Buffer.from(message).toString().split(",");
+    const index = users.findIndex(u => u.id === id);
     if (index !== -1) {
-      users[index].pos = json.pos;
+      users[index].pos.x = x;
+      users[index].pos.y = y;
       // emit the position, throttled
-      users[index].emitPos(json.pos.x, json.pos.y);
+      users[index].emitPos(x, y);
     }
   },
   close: (ws, code, message) => {
