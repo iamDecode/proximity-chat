@@ -211,7 +211,6 @@ class SelfPlayer extends Player {
 
 
 const $ = document.querySelector.bind(document);
-const log = (...args) => logs.innerText += args.join(' ') + '\n';
 const SOUND_CUTOFF_RANGE = 500;
 const SOUND_NEAR_RANGE = 300;
 
@@ -351,13 +350,13 @@ let peer;
 function initPeer() {
   peer = new Peer(selfPlayer.id, {host: location.hostname, port: location.port, path: '/peerjs'});
 
-  peer.on('open', id => { log('My peer ID is:', id); });
-  peer.on('disconnected', id => { log('lost connection'); });
+  peer.on('open', id => { console.log('My peer ID is:', id); });
+  peer.on('disconnected', id => { console.log('lost connection'); });
   peer.on('error', err => { console.error(err); });
 
   // run when someone calls us. answer the call
   peer.on('call', async call => {
-    log('call from', call.peer);
+    console.log('call from', call.peer);
     call.answer(await getStream());
     receiveCall(call);
   });
@@ -380,7 +379,7 @@ function receiveCall(call) {
     } else if (player.stream == null) {
       player.stream = new StreamSplit(stream, {left: 1, right: 1});
       playStream(stream, call.peer);
-      log('created stream for', call.peer);
+      console.log('created stream for', call.peer);
     }
   });
 }
@@ -397,7 +396,7 @@ socket.onmessage = async (message) => {
   // setup peer when user receives id
   if ('id' in data) {
     if (selfPlayer != null) {
-      log('destroying old identity', selfPlayer.id, 'and replacing with', data.id);
+      console.log('destroying old identity', selfPlayer.id, 'and replacing with', data.id);
       peer.destroy();
       peer = undefined;
       return;
@@ -421,7 +420,7 @@ socket.onmessage = async (message) => {
 
   // talk to any user who joins
   else if ('join' in data) {
-    log('calling', data.join.id);
+    console.log('calling', data.join.id);
     players[data.join.id] = new Player(data.join.id, 0, data.join.pos, data.join.pos);
     startCall(data.join.id);
   }
@@ -436,7 +435,7 @@ socket.onmessage = async (message) => {
 
   // remove players who left or disconnected
   else if ('leave' in data) {
-    log('call dropped from', data.leave.id);
+    console.log('call dropped from', data.leave.id);
     // remove player from players list
     
     if (data.leave.id in players) {
