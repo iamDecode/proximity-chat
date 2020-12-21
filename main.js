@@ -6,16 +6,22 @@ const { ExpressPeerServer } = require('peer');
 
 const { v4: uuidv4 } = require('uuid');
 
+const uws = require('uWebSockets.js');
+const { StringDecoder } = require('string_decoder');
+const decoder = new StringDecoder('utf8');
+
 // setup ssl
+const certFile = './cert.pem'
+const keyFile = './key.pem'
 const SSL_CONFIG = {
-  cert: fs.readFileSync('./cert.pem'),
-  key: fs.readFileSync('./key.pem'),
+  cert: fs.readFileSync(certFile),
+  key: fs.readFileSync(keyFile),
 };
 
-// setup express, socket io, and peerjs
+// setup express, uwebsocket, and peerjs
 const app = express();
 const server = https.createServer(SSL_CONFIG, app);
-const io = require('socket.io')(server);
+
 
 // peerjs's express server is garbage and hijacks ALL websocket upgrades regardless of route
 const peerjsWrapper = {on(event, callback) {
@@ -65,52 +71,67 @@ const throttle = (func, limit) => {
 const users = [];
 
 // handle socket connection
-io.on('connection', socket => {
-  const id = uuidv4();
-  const pos = {x: 100, y: 100};
-  users.push({ id, socket, pos });
-  console.log('user connected', id);
+const usocket = uws.SSLApp({key_file_name: keyFile, cert_file_name: certFile}).ws('/*', {
+  open: (ws) => {
+    const id = uuidv4();
+    const pos = {x: 100, y: 100};
+    
+    console.log('user connected', id);
 
-  // tell user his or her id
-  socket.emit('id', id);
+    // Tell the other users to connect to this user
+    usocket.publish('join', JSON.stringify({join: {id: id, pos: pos}}));
 
-  // tell the other users to connect to this user
-  socket.broadcast.emit('join', id, pos);
-  socket.emit('players', users
-    .filter(u => u.id !== id)
-    .map(u => ({id: u.id, pos: u.pos}))
-  );
+    // Let this client listen to join, leave, and position broadcasts
+    ws.subscribe('join');
+    ws.subscribe('leave');
+    ws.subscribe('position');
 
-  const emitPos = throttle((x, y) => {
-    socket.broadcast.emit('pos', id, {x, y});
-  }, 25);
+    // Tell user his or her id
+    ws.send(JSON.stringify({'id': id}));
 
-  socket.on('pos', (x, y) => {
-    // ignore non-number input
-    if (typeof x !== 'number' || typeof y !== 'number') return;
+    // ..and players info
+    ws.send(JSON.stringify({
+      'players': users
+        .filter(u => u.id !== id)
+        .map(u => ({id: u.id, pos: u.pos}))
+    }));
 
-    const index = users.findIndex(u => u.id === id);
+    const user = { id, ws, pos };
+    user.emitPos = throttle((x, y) => {
+      usocket.publish('position', JSON.stringify({position: {id: id, pos: {x: x, y: y}}}));
+    }, 25);
+
+    users.push(user);
+  },
+  message: (ws, message, isBinary) => {
+    let json = JSON.parse(decoder.write(Buffer.from(message)));
+
+    const index = users.findIndex(u => u.id === json.id);
     if (index !== -1) {
-      users[index].pos.x = x;
-      users[index].pos.y = y;
+      users[index].pos = json.pos;
+      // emit the position, throttled
+      users[index].emitPos(json.pos.x, json.pos.y);
     }
+  },
+  close: (ws, code, message) => {
+    const user = users.find(u => u.ws === ws);
+    console.log('user disconnected', user.id);
 
-    // emit the position, throttled
-    emitPos(x, y);
-  });
-
-  // user disconnected
-  socket.on('disconnect', () => {
-    console.log('user disconnected', id);
     // let other users know to disconnect this client
-    socket.broadcast.emit('leave', id);
+    usocket.publish('leave', JSON.stringify({leave: {id: user.id}}));
 
     // remove the user from the users list
-    const index = users.findIndex(u => u.id === id);
+    const index = users.findIndex(u => u.id === user.id);
     if (index !== -1) {
       users.splice(index, 1);
     }
-  });
+  }
+}).listen(9001, (token) => {
+  if (token) {
+    console.log('Listening to port 9001');
+  } else {
+    console.log('Failed to listen to port 9001');
+  }
 });
 
 peerServer.on('connection', peer => {
