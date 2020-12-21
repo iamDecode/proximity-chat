@@ -66,7 +66,7 @@ const throttle = (func, limit) => {
 }
 
 // track which users are connected
-const users = [];
+const users = {};
 
 // handle socket connection
 const usocket = uws.SSLApp({key_file_name: keyFile, cert_file_name: certFile}).ws('/*', {
@@ -89,9 +89,9 @@ const usocket = uws.SSLApp({key_file_name: keyFile, cert_file_name: certFile}).w
 
     // ..and players info
     ws.send(JSON.stringify({
-      'players': users
-        .filter(u => u.id !== id)
-        .map(u => ({id: u.id, pos: u.pos}))
+      'players': Object.entries(users)
+        .filter(u => u[0] !== id)
+        .map(u => ({id: u[1].id, pos: u[1].pos}))
     }));
 
     const user = { id, ws, pos };
@@ -99,30 +99,26 @@ const usocket = uws.SSLApp({key_file_name: keyFile, cert_file_name: certFile}).w
       usocket.publish('position', String([id, x, y]));
     }, 25);
 
-    users.push(user);
+    users[id] = user;
   },
   message: (ws, message, isBinary) => {
     const [id, x, y] = Buffer.from(message).toString().split(",");
-    const index = users.findIndex(u => u.id === id);
-    if (index !== -1) {
-      users[index].pos.x = x;
-      users[index].pos.y = y;
-      // emit the position, throttled
-      users[index].emitPos(x, y);
+    const user = users[id]
+    if (user != null) {
+      user.pos.x = x;
+      user.pos.y = y;
+      user.emitPos(x, y); // emit the position, throttled
     }
   },
   close: (ws, code, message) => {
-    const user = users.find(u => u.ws === ws);
+    const user = Object.values(users).find(u => u.ws === ws);
     console.log('user disconnected', user.id);
 
     // let other users know to disconnect this client
     usocket.publish('leave', JSON.stringify({leave: {id: user.id}}));
 
     // remove the user from the users list
-    const index = users.findIndex(u => u.id === user.id);
-    if (index !== -1) {
-      users.splice(index, 1);
-    }
+    delete users[user.id]
   }
 }).listen(9001, (token) => {
   if (token) {
