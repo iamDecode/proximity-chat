@@ -330,8 +330,9 @@ function playStream(stream, target) {
   const elem = document.createElement('video');
   elem.srcObject = stream;
   elem.muted = true;
+  elem.autoplay = true;
+  elem.playsInline = true;
   elem.setAttribute('data-peer', target);
-  elem.onloadedmetadata = () => elem.play();
 
   // add it to the player
   if (target instanceof Player && target.stream == null) {
