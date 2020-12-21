@@ -167,6 +167,7 @@ class SelfPlayer extends Player {
 
     const initStream = async _ => {
       const stream = await getStream();
+      this.stream = new StreamSplit(stream, {left: 0, right: 0});
       playStream(stream, selfPlayer);
     }
     initStream()
@@ -208,10 +209,11 @@ class SelfPlayer extends Player {
 
 
 
-
-const $ = document.querySelector.bind(document);
-const SOUND_CUTOFF_RANGE = 500;
-const SOUND_NEAR_RANGE = 300;
+// Settings
+let micEnabled = true;
+let camEnabled = true;
+let SOUND_CUTOFF_RANGE = 500;
+let SOUND_NEAR_RANGE = 300;
 
 const socket = new WebSocket(`wss://${location.hostname}:9001`);
 
@@ -318,6 +320,14 @@ class StreamSplit {
     this.channels.right.gain.value = right;
   }
 
+  setMic(enabled) {
+    this.stream.getAudioTracks()[0].enabled = enabled;
+  }
+
+  setCam(enabled) {
+    this.stream.getVideoTracks()[0].enabled = enabled;
+  }
+
   // close the context, stop the audio
   close() {
     return this.context.close();
@@ -335,7 +345,7 @@ function playStream(stream, target) {
   elem.setAttribute('data-peer', target);
 
   // add it to the player
-  if (target instanceof Player && target.stream == null) {
+  if (target instanceof SelfPlayer) {
     target.addVideo(elem);
   } else {
     const player = players[target];
@@ -364,7 +374,7 @@ function initPeer() {
 // start a call with target
 async function startCall(target) {
   if (!peer) return;
-  const call = peer.call(target, await getStream());
+  const call = peer.call(target, selfPlayer.stream.stream);
   receiveCall(call);
 }
 
@@ -449,4 +459,19 @@ socket.onmessage = async (message) => {
       delete players[player.id]
     };
   }
+};
+
+
+document.querySelector('button.mic').onclick = function() {
+  micEnabled = !micEnabled;
+  selfPlayer.stream.setMic(micEnabled)
+  this.classList.toggle('disabled')
+  this.querySelector('i').innerHTML = micEnabled ? "mic" : "mic_off"
+};
+
+document.querySelector('button.cam').onclick = function() {
+  camEnabled = !camEnabled;
+  selfPlayer.stream.setCam(camEnabled)
+  this.classList.toggle('disabled')
+  this.querySelector('i').innerHTML = camEnabled ? "videocam" : "videocam_off"
 };
