@@ -178,7 +178,7 @@ class SelfPlayer extends Player {
     this.y = y;
     this.sendPos(this.id, this.x, this.y);
 
-    players.forEach(player => {
+    Object.values(players).forEach(player => {
       player.setPosition(player.x, player.y);
     })
   }
@@ -240,7 +240,7 @@ const throttle = (func, limit) => {
 }
 
 let selfPlayer;
-const players = []; // TODO: should be a hashmap for fast lookup.
+const players = {};
 
 
 function calcVolumes(listenerPos, soundPos) {
@@ -340,7 +340,7 @@ function playStream(stream, target) {
   if (target instanceof Player && target.stream == null) {
     target.addVideo(elem);
   } else {
-    const player = players.find(p => p.id === target);
+    const player = players[target];
     player.addVideo(elem);
   }
 }
@@ -374,7 +374,7 @@ async function startCall(target) {
 function receiveCall(call) {
   call.on('stream', stream => {
     // stream.noiseSuppression = true;
-    const player = players.find(p => p.id === call.peer);
+    const player = players[call.peer];
     if (!player) {
       console.log('couldn\'t find player for stream', call.peer);
     } else if (player.stream == null) {
@@ -409,27 +409,27 @@ socket.onmessage = async (message) => {
 
   // Populate existing players
   else if ('players' in data) {
-    for (const p of data.players) {
-      players.push(new Player(
+    for (const p of Object.values(data.players)) {
+      players[p.id] = new Player(
         p.id,
         0,
         p.pos,
         {x: p.pos.x, y: p.pos.y}
-      ));
+      );
     }
   }
 
   // talk to any user who joins
   else if ('join' in data) {
     log('calling', data.join.id);
-    players.push(new Player(data.join.id, 0, data.join.pos, data.join.pos));
+    players[data.join.id] = new Player(data.join.id, 0, data.join.pos, data.join.pos);
     startCall(data.join.id);
   }
 
   // update player position
   else if ('position' in data) {
-    const player = players.find(p => p.id === data.position[0]);
-    if (player) {
+    if (data.position[0] in players) {
+      const player = players[data.position[0]];
       player.setPosition(data.position[1], data.position[2]);
     }
   }
@@ -438,13 +438,17 @@ socket.onmessage = async (message) => {
   else if ('leave' in data) {
     log('call dropped from', data.leave.id);
     // remove player from players list
-    const index = players.findIndex(p => p.id === data.leave.id);
-    if (index > -1) {
-      viewport.removeChild(players[index])
+    
+    if (data.leave.id in players) {
+      const player = players[data.leave.id];
+      viewport.removeChild(player)
+      
       // close the stream
-      if (players[index].stream)
-        players[index].stream.close();
-      players.splice(index, 1)
+      if (player.stream) {
+        player.stream.close();
+      }
+
+      delete players[player.id]
     };
   }
 };
