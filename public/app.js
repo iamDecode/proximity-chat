@@ -32,7 +32,7 @@ viewport
     .pinch()
     .wheel()
     .clamp({direction: 'all'})
-    .clampZoom({maxWidth: 3200, maxHeight: 1800, minWidth: 400})
+    .clampZoom({maxWidth: 3200, maxHeight: 1800, minHeight: 250})
     .setZoom(0.8)
     .decelerate({friction: 0.93})
 
