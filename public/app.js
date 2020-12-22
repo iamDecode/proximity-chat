@@ -131,6 +131,14 @@ class Player extends PIXI.Sprite {
     this.scale.set(this._originalScale[0] * scalar, this._originalScale[1] * scalar)
   }
 
+  setMic(enabled) {
+    this.stream.getAudioTracks()[0].enabled = enabled;
+  }
+
+  setCam(enabled) {
+    this.stream.getVideoTracks()[0].enabled = enabled;
+  }
+
   // updatePosition() {
   //   const speed = 25
   //   const delta = app.ticker.elapsedMS / 1000;
@@ -173,7 +181,7 @@ class SelfPlayer extends Player {
 
   async initStream(stream) {
     if (stream == null) stream = await navigator.mediaDevices.getUserMedia({audio: true, video: true});
-    this.stream = new StreamSplit(stream, {left: 0, right: 0});
+    this.stream = stream;
     playStream(stream, this);
 
     if(peer == null) initPeer();
@@ -266,71 +274,6 @@ function calcVolume(listenerPos, soundPos) {
   return scale;
 }
 
-// split an audio stream into left and right channels
-class StreamSplit {
-  constructor(stream, {left=1, right=1}={}) {
-    this.stream = stream;
-
-    // create audio context using the stream as a source
-    // const track = stream.getAudioTracks()[0];
-    // var AudioContext = window.AudioContext || window.webkitAudioContext;
-    // this.context = new AudioContext();
-    // this.source = this.context.createMediaStreamSource(new MediaStream([track]));
-
-    // // create a channel for each ear (left, right)
-    // this.channels = {
-    //   left: this.context.createGain(),
-    //   right: this.context.createGain(),
-    // };
-
-    // // connect the gains
-    // this.source.connect(this.channels.left);
-    // this.source.connect(this.channels.right);
-
-    // // create a merger to join the two gains
-    // const merger = this.context.createChannelMerger(2);
-    // this.channels.left.connect(merger, 0, 0);
-    // this.channels.right.connect(merger, 0, 1);
-
-    // // set the volume for each side
-    // this.setVolume(left, right);
-
-    // // connect the merger to the audio context
-    // merger.connect(this.context.destination);
-
-    // this.destination = this.context.createMediaStreamDestination();
-  }
-
-  // set the volume
-  setVolume(left=0, right=0) {
-    // // clamp volumes between 0 and 1
-    // left = Math.max(Math.min(left, 1), 0);
-    // right = Math.max(Math.min(right, 1), 0);
-
-    // // disable the stream if the volume is 0
-    // this.stream.enabled = left !== 0 && right !== 0;
-
-    // // set the volumes for each channel's gain
-    // this.channels.left.gain.value = left;
-    // this.channels.right.gain.value = right;
-
-
-  }
-
-  setMic(enabled) {
-    this.stream.getAudioTracks()[0].enabled = enabled;
-  }
-
-  setCam(enabled) {
-    this.stream.getVideoTracks()[0].enabled = enabled;
-  }
-
-  // close the context, stop the audio
-  close() {
-    //return this.context.close();
-  }
-}
-
 // play stream
 function playStream(stream, target) {
   // create the video element for the stream
@@ -363,7 +306,7 @@ function initPeer() {
   // run when someone calls us. answer the call
   peer.on('call', async call => {
     console.log('call from', call.peer);
-    call.answer(selfPlayer.stream.stream);
+    call.answer(selfPlayer.stream);
     receiveCall(call);
   });
 }
@@ -371,7 +314,7 @@ function initPeer() {
 // start a call with target
 async function startCall(target) {
   if (!peer) return;
-  const call = peer.call(target, selfPlayer.stream.stream);
+  const call = peer.call(target, selfPlayer.stream);
   receiveCall(call);
 }
 
@@ -383,7 +326,7 @@ function receiveCall(call) {
     if (!player) {
       console.log('couldn\'t find player for stream', call.peer);
     } else if (player.stream == null) {
-      player.stream = new StreamSplit(stream, {left: 1, right: 1});
+      player.stream = stream;
       playStream(stream, call.peer);
       console.log('created stream for', call.peer);
     }
@@ -447,12 +390,6 @@ socket.onmessage = async (message) => {
     if (data.leave.id in players) {
       const player = players[data.leave.id];
       viewport.removeChild(player)
-      
-      // close the stream
-      if (player.stream) {
-        player.stream.close();
-      }
-
       delete players[player.id]
     };
   }
@@ -461,14 +398,14 @@ socket.onmessage = async (message) => {
 
 document.querySelector('button.mic').onclick = function() {
   micEnabled = !micEnabled;
-  selfPlayer.stream.setMic(micEnabled)
+  selfPlayer.setMic(micEnabled)
   this.classList.toggle('disabled')
   this.querySelector('i').innerHTML = micEnabled ? "mic" : "mic_off"
 };
 
 document.querySelector('button.cam').onclick = function() {
   camEnabled = !camEnabled;
-  selfPlayer.stream.setCam(camEnabled)
+  selfPlayer.setCam(camEnabled)
   this.classList.toggle('disabled')
   this.querySelector('i').innerHTML = camEnabled ? "videocam" : "videocam_off"
 };
