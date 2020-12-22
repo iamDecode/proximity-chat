@@ -3,8 +3,7 @@ const app = new PIXI.Application({
   width: window.innerWidth,
   height: window.innerHeight,
   antialias: true,
-  resolution: window.devicePixelRatio,
-  autoResize: true
+  resizeTo: window
 })
 
 const stats = new Stats();
@@ -185,7 +184,7 @@ class SelfPlayer extends Player {
     if (stream == null) stream = await navigator.mediaDevices.getUserMedia({audio: true, video: true});
 
     navigator.mediaDevices.enumerateDevices().then(gotDevices).catch(handleError);
-    
+
     this.stream = stream;
     playStream(stream, this);
 
