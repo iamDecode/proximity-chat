@@ -87,6 +87,8 @@ class Player extends PIXI.Sprite {
   }
 
   addVideo(element) {
+    this._videoElement = element
+
     element.addEventListener('resize', e => {
       app.ticker.stop()
       this.texture = null
@@ -119,12 +121,13 @@ class Player extends PIXI.Sprite {
     this.x = x;
     this.y = y;
 
-    let [left, right] = calcVolumes({x: selfPlayer.x, y: selfPlayer.y}, {x: this.x, y: this.y})
-    left = (left * (1 - 0.5)) + 0.5;    
-    right = (right * (1 - 0.5)) + 0.5;
-    if (this.stream != null) this.stream.setVolume(left, right);
+    let volume = calcVolume({x: selfPlayer.x, y: selfPlayer.y}, {x: this.x, y: this.y})
+    if (this._videoElement != null) {
+      this._videoElement.volume = volume;
+      this._videoElement.muted = (volume == 0);
+    }
 
-    const scalar = Math.max(left, right);
+    const scalar = (volume * (1 - 0.5)) + 0.5;;
     this.scale.set(this._originalScale[0] * scalar, this._originalScale[1] * scalar)
   }
 
@@ -165,12 +168,15 @@ class SelfPlayer extends Player {
       socket.send([id, Math.round(x), Math.round(y)])
     }, 25);
 
-    const initStream = async _ => {
-      const stream = await getStream();
-      this.stream = new StreamSplit(stream, {left: 0, right: 0});
-      playStream(stream, selfPlayer);
-    }
-    initStream()
+    this.initStream();
+  }
+
+  async initStream(stream) {
+    if (stream == null) stream = await navigator.mediaDevices.getUserMedia({audio: true, video: true});
+    this.stream = new StreamSplit(stream, {left: 0, right: 0});
+    playStream(stream, this);
+
+    if(peer == null) initPeer();
   }
 
   setPosition(x, y) {
@@ -243,7 +249,7 @@ let selfPlayer;
 const players = {};
 
 
-function calcVolumes(listenerPos, soundPos) {
+function calcVolume(listenerPos, soundPos) {
   // calulate angle and distance from listener to sound
   const theta = Math.atan2(soundPos.y - listenerPos.y, soundPos.x - listenerPos.x);
   const dist = Math.hypot(soundPos.y - listenerPos.y, soundPos.x - listenerPos.x);
@@ -251,24 +257,13 @@ function calcVolumes(listenerPos, soundPos) {
 
   // target is too far away, no volume
   if (dist > SOUND_CUTOFF_RANGE)
-    return [0, 0];
+    return 0;
 
   // target is very close, max volume
   if (dist < SOUND_NEAR_RANGE)
-    return [1, 1];
+    return 1;
 
-  const cos = Math.cos(theta);
-  const sin = Math.sin(theta);
-
-  return [
-    (Math.pow((cos < 0 ? cos : 0), 2) + Math.pow(sin, 2)) * scale,
-    (Math.pow((cos > 0 ? cos : 0), 2) + Math.pow(sin, 2)) * scale,
-  ];
-}
-
-// get the current user's stream
-function getStream() {
-  return navigator.mediaDevices.getUserMedia({audio: true, video: true});
+  return scale;
 }
 
 // split an audio stream into left and right channels
@@ -277,47 +272,49 @@ class StreamSplit {
     this.stream = stream;
 
     // create audio context using the stream as a source
-    const track = stream.getAudioTracks()[0];
-    var AudioContext = window.AudioContext || window.webkitAudioContext;
-    this.context = new AudioContext();
-    this.source = this.context.createMediaStreamSource(new MediaStream([track]));
+    // const track = stream.getAudioTracks()[0];
+    // var AudioContext = window.AudioContext || window.webkitAudioContext;
+    // this.context = new AudioContext();
+    // this.source = this.context.createMediaStreamSource(new MediaStream([track]));
 
-    // create a channel for each ear (left, right)
-    this.channels = {
-      left: this.context.createGain(),
-      right: this.context.createGain(),
-    };
+    // // create a channel for each ear (left, right)
+    // this.channels = {
+    //   left: this.context.createGain(),
+    //   right: this.context.createGain(),
+    // };
 
-    // connect the gains
-    this.source.connect(this.channels.left);
-    this.source.connect(this.channels.right);
+    // // connect the gains
+    // this.source.connect(this.channels.left);
+    // this.source.connect(this.channels.right);
 
-    // create a merger to join the two gains
-    const merger = this.context.createChannelMerger(2);
-    this.channels.left.connect(merger, 0, 0);
-    this.channels.right.connect(merger, 0, 1);
+    // // create a merger to join the two gains
+    // const merger = this.context.createChannelMerger(2);
+    // this.channels.left.connect(merger, 0, 0);
+    // this.channels.right.connect(merger, 0, 1);
 
-    // set the volume for each side
-    this.setVolume(left, right);
+    // // set the volume for each side
+    // this.setVolume(left, right);
 
-    // connect the merger to the audio context
-    merger.connect(this.context.destination);
+    // // connect the merger to the audio context
+    // merger.connect(this.context.destination);
 
-    this.destination = this.context.createMediaStreamDestination();
+    // this.destination = this.context.createMediaStreamDestination();
   }
 
   // set the volume
   setVolume(left=0, right=0) {
-    // clamp volumes between 0 and 1
-    left = Math.max(Math.min(left, 1), 0);
-    right = Math.max(Math.min(right, 1), 0);
+    // // clamp volumes between 0 and 1
+    // left = Math.max(Math.min(left, 1), 0);
+    // right = Math.max(Math.min(right, 1), 0);
 
-    // disable the stream if the volume is 0
-    this.stream.enabled = left !== 0 && right !== 0;
+    // // disable the stream if the volume is 0
+    // this.stream.enabled = left !== 0 && right !== 0;
 
-    // set the volumes for each channel's gain
-    this.channels.left.gain.value = left;
-    this.channels.right.gain.value = right;
+    // // set the volumes for each channel's gain
+    // this.channels.left.gain.value = left;
+    // this.channels.right.gain.value = right;
+
+
   }
 
   setMic(enabled) {
@@ -330,7 +327,7 @@ class StreamSplit {
 
   // close the context, stop the audio
   close() {
-    return this.context.close();
+    //return this.context.close();
   }
 }
 
@@ -366,7 +363,7 @@ function initPeer() {
   // run when someone calls us. answer the call
   peer.on('call', async call => {
     console.log('call from', call.peer);
-    call.answer(await getStream());
+    call.answer(selfPlayer.stream.stream);
     receiveCall(call);
   });
 }
@@ -381,7 +378,7 @@ async function startCall(target) {
 // play the stream from the call in a video element
 function receiveCall(call) {
   call.on('stream', stream => {
-    // stream.noiseSuppression = true;
+    stream.noiseSuppression = true;
     const player = players[call.peer];
     if (!player) {
       console.log('couldn\'t find player for stream', call.peer);
@@ -412,7 +409,6 @@ socket.onmessage = async (message) => {
     }
 
     selfPlayer = new SelfPlayer(data.id, 0, {x:100, y:100}, {x:100, y:100})
-    initPeer();
   } 
 
   // Populate existing players
@@ -475,3 +471,112 @@ document.querySelector('button.cam').onclick = function() {
   this.classList.toggle('disabled')
   this.querySelector('i').innerHTML = camEnabled ? "videocam" : "videocam_off"
 };
+
+document.querySelector('button.settings').onclick = function() {
+  document.querySelector('.preferences').classList.toggle('show')
+};
+
+
+
+// Device settings window
+const audioInputSelect = document.querySelector('select#audioSource');
+const audioOutputSelect = document.querySelector('select#audioOutput');
+const videoSelect = document.querySelector('select#videoSource');
+let selectors = [audioInputSelect, audioOutputSelect, videoSelect];
+
+audioOutputSelect.disabled = !('sinkId' in HTMLMediaElement.prototype);
+if (audioOutputSelect.disabled) {
+  audioOutputSelect.querySelector('option').text = "No browser support"
+  selectors = [audioInputSelect, videoSelect];
+}
+
+function gotDevices(deviceInfos) {
+  // Handles being called several times to update labels. Preserve values.
+  const values = selectors.map(select => select.value);
+  selectors.forEach(select => {
+    while (select.firstChild) {
+      select.removeChild(select.firstChild);
+    }
+  });
+  for (let i = 0; i !== deviceInfos.length; ++i) {
+    const deviceInfo = deviceInfos[i];
+    const option = document.createElement('option');
+    option.value = deviceInfo.deviceId;
+    if (deviceInfo.kind === 'audioinput') {
+      option.text = deviceInfo.label || `Microphone ${audioInputSelect.length + 1}`;
+      audioInputSelect.appendChild(option);
+    } else if (deviceInfo.kind === 'audiooutput') {
+      option.text = deviceInfo.label || `Speaker ${audioOutputSelect.length + 1}`;
+      audioOutputSelect.appendChild(option);
+    } else if (deviceInfo.kind === 'videoinput') {
+      option.text = deviceInfo.label || `Camera ${videoSelect.length + 1}`;
+      videoSelect.appendChild(option);
+    } else {
+      console.log('Some other kind of source/device: ', deviceInfo);
+    }
+  }
+  selectors.forEach((select, selectorIndex) => {
+    if (Array.prototype.slice.call(select.childNodes).some(n => n.value === values[selectorIndex])) {
+      select.value = values[selectorIndex];
+    }
+  });
+}
+
+navigator.mediaDevices.enumerateDevices().then(gotDevices).catch(handleError);
+
+// Attach audio output device to video element using device/sink ID.
+function attachSinkId(element, sinkId) {
+  if (typeof element.sinkId !== 'undefined') {
+    element.setSinkId(sinkId)
+        .then(() => {
+          console.log(`Success, audio output device attached: ${sinkId}`);
+        })
+        .catch(error => {
+          let errorMessage = error;
+          if (error.name === 'SecurityError') {
+            errorMessage = `You need to use HTTPS for selecting audio output device: ${error}`;
+          }
+          console.error(errorMessage);
+          // Jump back to first output device in the list as it's the default.
+          audioOutputSelect.selectedIndex = 0;
+        });
+  } else {
+    console.warn('Browser does not support output device selection.');
+  }
+}
+
+function handleError(error) {
+  throw error;
+}
+
+audioOutputSelect.onchange = _ => {
+  const audioDestination = audioOutputSelect.value;
+  Object.values(players).forEach(player => {
+    console.log(player._videoElement)
+    attachSinkId(player._videoElement, audioDestination);
+  })
+}
+
+audioInputSelect.onchange = videoSelect.onchange = _ => {
+  const audioSource = audioInputSelect.value;
+  const videoSource = videoSelect.value;
+
+  const constraints = {
+    audio: {deviceId: audioSource ? {exact: audioSource} : undefined},
+    video: {deviceId: videoSource ? {exact: videoSource} : undefined}
+  };
+  navigator.mediaDevices.getUserMedia(constraints).then(stream => {
+    let audioTrack = stream.getAudioTracks()[0];
+    let videoTrack = stream.getVideoTracks()[0];
+    Object.values(peer.connections).map(x => x[0].peerConnection.getSenders()).flat().forEach(s => {
+      if (s.track.kind == videoTrack.kind) {
+        console.log('replacing video!')
+        s.replaceTrack(videoTrack);
+      } else if (s.track.kind == audioTrack.kind) {
+        console.log('replacing audio!')
+        s.replaceTrack(audioTrack);
+      }
+    });
+    return navigator.mediaDevices.enumerateDevices()
+  }).then(gotDevices).catch(handleError);
+}
