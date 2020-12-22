@@ -16,12 +16,37 @@
 
     <nav>
       <ul>
+        <li><button class="settings"><i class="material-icons">settings</i></button></li>
         <li><button class="cam"><i class="material-icons">videocam</i></button></li>
         <li><button class="mic"><i class="material-icons">mic</i></button></li>
       </ul>
     </nav>
+
+    <div class="preferences">
+      <h2>Device settings</h2>
+
+      <label>Microphone</label>
+      <i class="prefix material-icons">mic</i>
+      <select id="audioSource">
+        <option value="" disabled selected hidden>Choose an audio source</option>
+      </select>
+
+      <label>Output device</label>
+      <i class="prefix material-icons">volume_up</i>
+      <select id="audioOutput">
+        <option value="" disabled selected hidden>Choose an audio output</option>
+      </select>
+
+      <label>Webcam</label>
+      <i class="prefix material-icons">videocam</i>
+      <select id="videoSource">
+        <option value="" disabled selected hidden>Choose a video source</option>
+      </select>
+    </div>
     
     <script src="public/app.js"></script>
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.gstatic.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter&family=Lato:wght@400;700&display=swap" rel="stylesheet">
   </body>
 </html>
