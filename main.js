@@ -76,6 +76,9 @@ const usocket = uws.SSLApp({key_file_name: keyFile, cert_file_name: certFile}).w
     
     console.log('user connected', id);
 
+    // Tell user his or her id
+    ws.send(JSON.stringify({'id': id}));
+
     // Tell the other users to connect to this user
     usocket.publish('join', JSON.stringify({join: {id: id, pos: pos}}));
 
@@ -83,9 +86,6 @@ const usocket = uws.SSLApp({key_file_name: keyFile, cert_file_name: certFile}).w
     ws.subscribe('join');
     ws.subscribe('leave');
     ws.subscribe('position');
-
-    // Tell user his or her id
-    ws.send(JSON.stringify({'id': id}));
 
     // ..and players info
     ws.send(JSON.stringify({
