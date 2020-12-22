@@ -125,6 +125,8 @@ class Player extends PIXI.Sprite {
     if (this._videoElement != null) {
       this._videoElement.volume = volume;
       this._videoElement.muted = (volume == 0);
+      this.setMic(volume !== 0)
+      this.setCam(volume !== 0)
     }
 
     const scalar = (volume * (1 - 0.5)) + 0.5;;
