@@ -414,11 +414,12 @@ socket.onmessage = async (message) => {
   // Populate existing players
   else if ('players' in data) {
     for (const p of Object.values(data.players)) {
+      const pos = {x: parseInt(p.pos.x), y: parseInt(p.pos.y)}
       players[p.id] = new Player(
         p.id,
         0,
-        p.pos,
-        {x: p.pos.x, y: p.pos.y}
+        pos,
+        pos
       );
     }
   }
@@ -434,7 +435,7 @@ socket.onmessage = async (message) => {
   else if ('position' in data) {
     if (data.position[0] in players) {
       const player = players[data.position[0]];
-      player.setPosition(data.position[1], data.position[2]);
+      player.setPosition(parseInt(data.position[1]), parseInt(data.position[2]));
     }
   }
 
