@@ -183,6 +183,9 @@ class SelfPlayer extends Player {
 
   async initStream(stream) {
     if (stream == null) stream = await navigator.mediaDevices.getUserMedia({audio: true, video: true});
+
+    navigator.mediaDevices.enumerateDevices().then(gotDevices).catch(handleError);
+    
     this.stream = stream;
     playStream(stream, this);
 
@@ -431,6 +434,7 @@ if (audioOutputSelect.disabled) {
 }
 
 function gotDevices(deviceInfos) {
+  console.log(deviceInfos)
   // Handles being called several times to update labels. Preserve values.
   const values = selectors.map(select => select.value);
   selectors.forEach(select => {
@@ -461,8 +465,6 @@ function gotDevices(deviceInfos) {
     }
   });
 }
-
-navigator.mediaDevices.enumerateDevices().then(gotDevices).catch(handleError);
 
 // Attach audio output device to video element using device/sink ID.
 function attachSinkId(element, sinkId) {
