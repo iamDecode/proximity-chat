@@ -463,7 +463,6 @@ if (audioOutputSelect.disabled) {
 }
 
 function gotDevices(deviceInfos) {
-  console.log(deviceInfos)
   // Handles being called several times to update labels. Preserve values.
   const values = selectors.map(select => select.value);
   selectors.forEach(select => {
