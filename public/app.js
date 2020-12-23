@@ -490,8 +490,8 @@ function gotDevices(deviceInfos) {
   // Handles being called several times to update labels. Preserve values.
   const values = selectors.map(select => select.value);
   selectors.forEach(select => {
-    while (select.firstChild) {
-      select.removeChild(select.firstChild);
+    while (select.children.length != 1) {
+      select.removeChild(select.lastChild);
     }
   });
   for (let i = 0; i !== deviceInfos.length; ++i) {
@@ -551,9 +551,11 @@ audioOutputSelect.onchange = _ => {
   })
 }
 
-audioInputSelect.onchange = videoSelect.onchange = _ => {
-  const audioSource = audioInputSelect.value;
-  const videoSource = videoSelect.value;
+audioInputSelect.onchange = videoSelect.onchange = e => {
+  let audioSource = audioInputSelect.value;
+  if (audioSource.length == 0) audioSource = null;
+  let videoSource = videoSelect.value;
+  if (videoSource.length == 0) videoSource = null;
 
   const constraints = {
     audio: {deviceId: audioSource ? {exact: audioSource} : undefined},
