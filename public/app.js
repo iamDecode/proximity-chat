@@ -44,9 +44,9 @@ const sprite = viewport.addChild(new PIXI.Sprite.from('public/assets/room.png'))
 
 
 
-class Player extends PIXI.Sprite {
+class Player extends PIXI.Container {
   constructor(id, avatar, pos, goal) {
-    super(PIXI.Texture.WHITE);
+    super();
 
     this.id = id
     this.avatar = avatar
@@ -54,39 +54,35 @@ class Player extends PIXI.Sprite {
     this.goal = goal
 
     // PIXI setup
+    this.x = goal.x;
+    this.y = goal.y;
+    this.scale.set(0.5);
+    this.size = 125
+    const radius = this.size / 2
+
+    this.audioRing = new PIXI.Graphics();
+    this.addChild(this.audioRing);
+
+    this.sprite = new PIXI.Sprite(PIXI.Texture.WHITE);
+    this.sprite.tint = 0x000000;
+    this.sprite.width = this.sprite.height = this.size;
+    this.sprite.anchor.set(0.5);
+    this.addChild(this.sprite);
+
     this.border = new PIXI.Graphics();
+    this.border.lineStyle(radius * 0.04, 0xffffff, 1, 0)
+    this.border.arc(0, 0, radius, 0, 2*Math.PI)
     this.addChild(this.border);
 
     const circle = new PIXI.Graphics();
+    circle.beginFill(0xffffff);
+    circle.drawCircle(0, 0, radius);
+    circle.endFill();
     this.addChild(circle);
-    this.mask = circle;
-
-    this.anchor.set(0.5);
-    this.x = goal.x;
-    this.y = goal.y;
-    this.size = 125
-    this.setSize(this.size * 0.5, this.size * 0.5);
+    this.sprite.mask = circle;
+  
 
     viewport.addChild(this)
-  }
-
-  setSize(width, height) {
-    this.width = width;
-    this.height = height;
-
-    const size = Math.min(width, height);
-    const radius = size / (2 * this.scale.x);
-
-    this.mask.clear();
-    this.mask.beginFill(0xffffff);
-    this.mask.drawCircle(0, 0, radius);
-    this.mask.endFill();
-
-    this.border.clear();
-    this.border.lineStyle(radius * 0.04, 0xffffff, 1, 0)
-    this.border.arc(0, 0, radius, 0, 2*Math.PI)
-
-    this._originalScale = [this.scale.x, this.scale.y];
   }
 
   addVideo(element) {
@@ -94,23 +90,26 @@ class Player extends PIXI.Sprite {
 
     element.addEventListener('resize', e => {
       app.ticker.stop()
-      this.texture = null
+      this.sprite.texture = null
+      this.scale.set(1);
+      this.sprite.tint = 0xffffff; // Removes the tint
 
       setTimeout(_ => {
         const texture = PIXI.Texture.from(element);
-        this.texture = texture;
+        this.sprite.texture = texture;
 
         console.log("size changed to", texture.width, texture.height)
 
         let width, height;
         if (texture.width > texture.height) {
-          width = this.size * (texture.width/texture.height)
+          width = this.size * (texture.width / texture.height)
           height = this.size
         } else {
-          height = this.size * (texture.height/texture.width)
+          height = this.size * (texture.height / texture.width)
           width = this.size
         }
-        this.setSize(width, height)
+        this.sprite.width = width
+        this.sprite.height = height
 
         if (!(this instanceof SelfPlayer)) {
           this.setPosition(this.x, this.y); // To recompute size
@@ -133,7 +132,7 @@ class Player extends PIXI.Sprite {
     }
 
     const scalar = (volume * (1 - 0.5)) + 0.5;;
-    this.scale.set(this._originalScale[0] * scalar, this._originalScale[1] * scalar)
+    this.scale.set(scalar, scalar)
   }
 
   setMic(enabled) {
@@ -151,10 +150,37 @@ class Player extends PIXI.Sprite {
   //   this.position.y += (this.goal.y - this.position.y) * speed * delta;
   // }
 
-  // render(renderer) {
-  //   this.updatePosition()
-  //   super.render(renderer)
-  // }
+  drawAudioRing(data) {
+    const bottomCutoff = 0.4;
+    const scale = Math.max(0 ,((Math.max(...data) / 255) - bottomCutoff) / (1 - bottomCutoff));
+    const width = (scale * 0.2) + 1;
+    this.audioRing.clear();
+    this.audioRing.beginFill(0xa3f5aa, Math.min(1, scale + 0.4))
+    this.audioRing.drawCircle(0, 0, (this.size / 2) * width);
+    this.audioRing.endFill();
+  }
+
+  render(renderer) {
+    //this.updatePosition()
+
+    if (this.stream) {
+      if(this.analyser == null) {
+        const track = this.stream.getAudioTracks()[0];
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        const context = new AudioContext();
+        const source = context.createMediaStreamSource(new MediaStream([track]));
+        this.analyser = context.createAnalyser();
+        source.connect(this.analyser);
+      }
+
+      const data = new Uint8Array(this.analyser.frequencyBinCount);
+      this.analyser.getByteFrequencyData(data);
+
+      this.drawAudioRing(data);  
+    }
+
+    super.render(renderer)
+  }
 }
 
 class SelfPlayer extends Player {
