@@ -348,7 +348,10 @@ function initPeer() {
 // start a call with target
 async function startCall(target) {
   if (!peer) return;
-  const call = peer.call(target, selfPlayer.stream);
+  const call = peer.call(target, selfPlayer.stream, {sdpTransform: x => {
+    // FIX: ensure rotation is correct on mobile devices
+    return x.split("\n").filter(y => !y.includes("urn:3gpp:video-orientation")).join("\n")
+  }});
   receiveCall(call);
 }
 
