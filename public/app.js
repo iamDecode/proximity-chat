@@ -316,15 +316,36 @@ function playStream(stream, target) {
   elem.muted = true;
   elem.autoplay = true;
   elem.playsInline = true;
-  elem.setAttribute('data-peer', target);
 
   // add it to the player
   if (target instanceof SelfPlayer) {
+    elem.setAttribute('data-peer', target.id);
+    
+    // iOS will stop playing the video when video is not used in webrtc or present in DOM.
+    if (iOS()) {
+      document.querySelectorAll('video').forEach(e => e.parentNode.removeChild(e))
+      document.body.appendChild(elem)
+    }
+    
     target.addVideo(elem);
   } else {
+    elem.setAttribute('data-peer', target);
     const player = players[target];
     player.addVideo(elem);
   }
+}
+
+function iOS() {
+  return [
+    'iPad Simulator',
+    'iPhone Simulator',
+    'iPod Simulator',
+    'iPad',
+    'iPhone',
+    'iPod'
+  ].includes(navigator.platform)
+  // iPad on iOS 13 detection
+  || (navigator.userAgent.includes("Mac") && "ontouchend" in document)
 }
 
 let peer;
@@ -539,8 +560,14 @@ audioInputSelect.onchange = videoSelect.onchange = _ => {
     video: {deviceId: videoSource ? {exact: videoSource} : undefined}
   };
   navigator.mediaDevices.getUserMedia(constraints).then(stream => {
-    let audioTrack = stream.getAudioTracks()[0];
-    let videoTrack = stream.getVideoTracks()[0];
+    const audioTrack = stream.getAudioTracks()[0];
+    const videoTrack = stream.getVideoTracks()[0];
+
+    if (e.target.id == "videoSource") {
+      selfPlayer.stream = stream;
+      playStream(stream, selfPlayer);
+    }
+
     Object.values(peer.connections).map(x => x[0].peerConnection.getSenders()).flat().forEach(s => {
       if (s.track.kind == videoTrack.kind) {
         console.log('replacing video!')
