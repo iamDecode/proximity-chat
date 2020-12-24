@@ -90,13 +90,17 @@ class Player extends PIXI.Container {
 
     element.addEventListener('resize', e => {
       app.ticker.stop()
-      this.sprite.texture = null
       this.scale.set(1);
-      this.sprite.tint = 0xffffff; // Removes the tint
 
       setTimeout(_ => {
+        if (this.stream.getVideoTracks().length === 0) {
+          app.ticker.start()
+          return
+        }
+
         const texture = PIXI.Texture.from(element);
         this.sprite.texture = texture;
+        this.sprite.tint = 0xffffff; // Removes the tint
 
         console.log("size changed to", texture.width, texture.height)
 
@@ -136,11 +140,11 @@ class Player extends PIXI.Container {
   }
 
   setMic(enabled) {
-    this.stream.getAudioTracks()[0].enabled = enabled;
+    this.stream.getAudioTracks().forEach(x => x.enabled = enabled)
   }
 
   setCam(enabled) {
-    this.stream.getVideoTracks()[0].enabled = enabled;
+    this.stream.getVideoTracks().forEach(x => x.enabled = enabled)
   }
 
   // updatePosition() {
@@ -211,7 +215,8 @@ class SelfPlayer extends Player {
   }
 
   async initStream(stream) {
-    if (stream == null) stream = await navigator.mediaDevices.getUserMedia({audio: true, video: true});
+    if (stream == null) stream = await getStream({audio: true, video: true});
+    stream.noiseSuppression = true;
 
     navigator.mediaDevices.enumerateDevices().then(gotDevices).catch(handleError);
 
@@ -384,6 +389,7 @@ function receiveCall(call) {
     if (!player) {
       console.log('couldn\'t find player for stream', call.peer);
     } else if (player.stream == null) {
+      stream.noiseSuppression = true;
       player.stream = stream;
       playStream(stream, call.peer);
       console.log('created stream for', call.peer);
@@ -543,6 +549,15 @@ function handleError(error) {
   throw error;
 }
 
+async function getStream(constraints) {
+  return await navigator.mediaDevices.getUserMedia(constraints).catch(err => {
+    if('video' in constraints && (err.name == 'NotAllowedError' || err.name === 'OverconstrainedError')) {
+      delete constraints.video;
+      return navigator.mediaDevices.getUserMedia(constraints)
+    }
+  })
+}
+
 audioOutputSelect.onchange = _ => {
   const audioDestination = audioOutputSelect.value;
   Object.values(players).forEach(player => {
@@ -561,7 +576,7 @@ audioInputSelect.onchange = videoSelect.onchange = e => {
     audio: {deviceId: audioSource ? {exact: audioSource} : undefined},
     video: {deviceId: videoSource ? {exact: videoSource} : undefined}
   };
-  navigator.mediaDevices.getUserMedia(constraints).then(stream => {
+  getStream(constraints).then(stream => {
     const audioTrack = stream.getAudioTracks()[0];
     const videoTrack = stream.getVideoTracks()[0];
 
