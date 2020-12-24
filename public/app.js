@@ -374,10 +374,19 @@ function initPeer() {
 // start a call with target
 async function startCall(target) {
   if (!peer) return;
-  const call = peer.call(target, selfPlayer.stream, {sdpTransform: x => {
-    // FIX: ensure rotation is correct on mobile devices
-    return x.split("\n").filter(y => !y.includes("urn:3gpp:video-orientation")).join("\n")
-  }});
+
+  let options = { 
+    sdpTransform: x => {
+      // FIX: ensure rotation is correct on mobile devices
+      return x.split("\n").filter(y => !y.includes("urn:3gpp:video-orientation")).join("\n")
+    }
+  };
+
+  if (selfPlayer.stream.getVideoTracks().length === 0) {
+    options.constraints = { offerToReceiveVideo: true };
+  }
+
+  const call = peer.call(target, selfPlayer.stream, options);
   receiveCall(call);
 }
 
@@ -389,7 +398,6 @@ function receiveCall(call) {
     if (!player) {
       console.log('couldn\'t find player for stream', call.peer);
     } else if (player.stream == null) {
-      stream.noiseSuppression = true;
       player.stream = stream;
       playStream(stream, call.peer);
       console.log('created stream for', call.peer);
