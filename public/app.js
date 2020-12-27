@@ -87,40 +87,13 @@ class Player extends PIXI.Container {
 
   addVideo(element) {
     this._videoElement = element
+    this.scale.set(1);
 
-    element.addEventListener('resize', e => {
-      app.ticker.stop()
-      this.scale.set(1);
-
-      setTimeout(_ => {
-        if (this.stream.getVideoTracks().length === 0) {
-          app.ticker.start()
-          return
-        }
-
-        const texture = PIXI.Texture.from(element);
-        this.sprite.texture = texture;
-        this.sprite.tint = 0xffffff; // Removes the tint
-
-        console.log("size changed to", texture.width, texture.height)
-
-        let width, height;
-        if (texture.width > texture.height) {
-          width = this.size * (texture.width / texture.height)
-          height = this.size
-        } else {
-          height = this.size * (texture.height / texture.width)
-          width = this.size
-        }
-        this.sprite.width = width
-        this.sprite.height = height
-
-        if (!(this instanceof SelfPlayer)) {
-          this.setPosition(this.x, this.y); // To recompute size
-        }
-        app.ticker.start()
-      }, 100) // FIXME: This is a terrible hack.
-    })
+    if(this.stream.getVideoTracks().length > 0) {
+      const texture = PIXI.Texture.from(element);
+      this.sprite.texture = texture;
+      this.sprite.tint = 0xffffff; // Removes the tint
+    }
   }
 
   setPosition(x, y) {
@@ -181,6 +154,18 @@ class Player extends PIXI.Container {
       this.analyser.getByteFrequencyData(data);
 
       this.drawAudioRing(data);  
+
+
+      let width, height;
+      if (this.sprite.texture.width > this.sprite.texture.height) {
+        width = this.size * (this.sprite.texture.width / this.sprite.texture.height)
+        height = this.size
+      } else {
+        height = this.size * (this.sprite.texture.height / this.sprite.texture.width)
+        width = this.size
+      }
+      this.sprite.width = width
+      this.sprite.height = height
     }
 
     super.render(renderer)
