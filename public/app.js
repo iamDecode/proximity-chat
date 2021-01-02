@@ -277,8 +277,8 @@ class SelfPlayer extends Player {
 // Settings
 let micEnabled = true;
 let camEnabled = true;
-let SOUND_CUTOFF_RANGE = 500;
-let SOUND_NEAR_RANGE = 300;
+let SOUND_CUTOFF_RANGE = 350;
+let SOUND_NEAR_RANGE = 200;
 
 const socket = new WebSocket(`wss://${location.hostname}:9001`);
 
