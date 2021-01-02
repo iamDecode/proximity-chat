@@ -79,7 +79,21 @@ class Player extends PIXI.Container {
     circle.endFill();
     this.addChild(circle);
     this.sprite.mask = circle;
-  
+
+    const broadcastIcon = new PIXI.Container();
+    const broadcastText = new PIXI.Text('campaign', {fontFamily: 'Material Icons', fontSize: 24, fill: 0xffffff, align: 'center'})
+    const broadcastBg = new PIXI.Graphics();
+    broadcastBg.beginFill(0x00b385);
+    broadcastBg.drawCircle(12, 11, 18);
+    broadcastBg.endFill();
+    broadcastIcon.addChild(broadcastBg);
+    broadcastIcon.addChild(broadcastText);
+    broadcastIcon.x = 32;
+    broadcastIcon.y = 32;
+    broadcastIcon.scale.set(0.8);
+    broadcastIcon.alpha = 0;
+    this.addChild(broadcastIcon);
+    this.broadcastIcon = broadcastIcon;
 
     viewport.addChild(this)
   }
@@ -113,6 +127,7 @@ class Player extends PIXI.Container {
 
   setBroadcast(enabled) {
     this.broadcast = enabled;
+    this.broadcastIcon.alpha = enabled ? 1 : 0;
     this.setPosition(this.x, this.y)  // To update scale
   }
 
@@ -475,7 +490,7 @@ document.querySelector('button.settings').onclick = function() {
 
 document.querySelector('button.broadcast').onclick = function() {
   this.classList.toggle('enabled')
-  selfPlayer.broadcast = !selfPlayer.broadcast
+  selfPlayer.setBroadcast(!selfPlayer.broadcast)
   socket.send([selfPlayer.id, "broadcast", selfPlayer.broadcast])
 };
 
