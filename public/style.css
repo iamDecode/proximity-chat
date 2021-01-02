@@ -99,15 +99,15 @@ nav ul li button.disabled:active {
 }
 
 nav ul li button.enabled {
-  color: #2ED35D;
+  color: #00b385;
 }
 
 nav ul li button.enabled:hover {
-  background: rgba(46,211,93,0.15);
+  background: rgba(0,179,133,0.15);
 }
 
 nav ul li button.enabled:active {
-  background: rgba(46,211,93,0.35);
+  background: rgba(0,179,133,0.35);
 }
 
 .preferences {
