@@ -219,3 +219,9 @@ nav ul li button.enabled:active {
     background:rgba(255, 255, 255, 0.25);
   }
 }
+
+.broadcast:not(.enabled) i {
+  width: 16px;
+  margin-right: 8px;
+  overflow: hidden;
+}
