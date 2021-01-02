@@ -92,7 +92,7 @@ class Player extends PIXI.Container {
     broadcastIcon.x = 32;
     broadcastIcon.y = 32;
     broadcastIcon.scale.set(0.8);
-    broadcastIcon.alpha = 0;
+    broadcastIcon.alpha = broadcast ? 1 : 0;
     this.addChild(broadcastIcon);
     this.broadcastIcon = broadcastIcon;
 

@@ -92,7 +92,7 @@ const usocket = uws.SSLApp({key_file_name: keyFile, cert_file_name: certFile}).w
     ws.send(JSON.stringify({
       'players': Object.entries(users)
         .filter(u => u[0] !== id)
-        .map(u => ({id: u[1].id, pos: u[1].pos}))
+        .map(u => ({id: u[1].id, pos: u[1].pos, broadcast: u[1].broadcast}))
     }));
 
     const user = { id, ws, pos, broadcast: false };
