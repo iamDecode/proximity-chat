@@ -45,11 +45,12 @@ const sprite = viewport.addChild(new PIXI.Sprite.from('public/assets/room.png'))
 
 
 class Player extends PIXI.Container {
-  constructor(id, avatar, pos) {
+  constructor(id, avatar, pos, broadcast) {
     super();
 
     this.id = id
     this.avatar = avatar
+    this.broadcast = broadcast
 
     // PIXI setup
     this.x = pos.x;
@@ -98,7 +99,7 @@ class Player extends PIXI.Container {
     this.x = x;
     this.y = y;
 
-    let volume = calcVolume({x: selfPlayer.x, y: selfPlayer.y}, {x: this.x, y: this.y})
+    let volume = this.calcVolume()
     if (this._videoElement != null) {
       this._videoElement.volume = volume;
       this._videoElement.muted = (volume == 0);
@@ -108,6 +109,32 @@ class Player extends PIXI.Container {
 
     const scalar = (volume * (1 - 0.5)) + 0.5;;
     this.scale.set(scalar, scalar)
+  }
+
+  setBroadcast(enabled) {
+    this.broadcast = enabled;
+    this.setPosition(this.x, this.y)  // To update scale
+  }
+
+  calcVolume() {
+    if (this.broadcast) {
+      return 1;
+    }
+    
+    // calulate angle and distance from listener to sound
+    const theta = Math.atan2(this.y - selfPlayer.y, this.x - selfPlayer.x);
+    const dist = Math.hypot(this.y - selfPlayer.y, this.x - selfPlayer.x);
+    const scale = 1 - (dist - SOUND_NEAR_RANGE) / (SOUND_CUTOFF_RANGE - SOUND_NEAR_RANGE);
+
+    // target is too far away, no volume
+    if (dist > SOUND_CUTOFF_RANGE)
+      return 0;
+
+    // target is very close, max volume
+    if (dist < SOUND_NEAR_RANGE)
+      return 1;
+
+    return scale;
   }
 
   setMic(enabled) {
@@ -163,7 +190,7 @@ class Player extends PIXI.Container {
 
 class SelfPlayer extends Player {
  constructor(id, avatar, pos) {
-    super(id, avatar, pos);
+    super(id, avatar, pos, false);
 
     this.interactive = true
     this.buttonMode = true
@@ -264,24 +291,6 @@ const throttle = (func, limit) => {
 
 let selfPlayer;
 const players = {};
-
-
-function calcVolume(listenerPos, soundPos) {
-  // calulate angle and distance from listener to sound
-  const theta = Math.atan2(soundPos.y - listenerPos.y, soundPos.x - listenerPos.x);
-  const dist = Math.hypot(soundPos.y - listenerPos.y, soundPos.x - listenerPos.x);
-  const scale = 1 - (dist - SOUND_NEAR_RANGE) / (SOUND_CUTOFF_RANGE - SOUND_NEAR_RANGE);
-
-  // target is too far away, no volume
-  if (dist > SOUND_CUTOFF_RANGE)
-    return 0;
-
-  // target is very close, max volume
-  if (dist < SOUND_NEAR_RANGE)
-    return 1;
-
-  return scale;
-}
 
 // play stream
 function playStream(stream, target) {
@@ -403,7 +412,8 @@ socket.onmessage = async (message) => {
       players[p.id] = new Player(
         p.id,
         0,
-        pos
+        pos,
+        p.broadcast
       );
     }
   }
@@ -411,7 +421,7 @@ socket.onmessage = async (message) => {
   // talk to any user who joins
   else if ('join' in data) {
     console.log('calling', data.join.id);
-    players[data.join.id] = new Player(data.join.id, 0, data.join.pos);
+    players[data.join.id] = new Player(data.join.id, 0, data.join.pos, false);
     startCall(data.join.id);
   }
 
@@ -420,6 +430,14 @@ socket.onmessage = async (message) => {
     if (data.position[0] in players) {
       const player = players[data.position[0]];
       player.setPosition(parseInt(data.position[1]), parseInt(data.position[2]));
+    }
+  }
+
+  // update player broadcast
+  else if ('broadcast' in data) {
+    if (data.broadcast.id in players) {
+      const player = players[data.broadcast.id];
+      player.setBroadcast(data.broadcast.enabled);
     }
   }
 
@@ -453,6 +471,12 @@ document.querySelector('button.cam').onclick = function() {
 
 document.querySelector('button.settings').onclick = function() {
   document.querySelector('.preferences').classList.toggle('show')
+};
+
+document.querySelector('button.broadcast').onclick = function() {
+  this.classList.toggle('enabled')
+  selfPlayer.broadcast = !selfPlayer.broadcast
+  socket.send([selfPlayer.id, "broadcast", selfPlayer.broadcast])
 };
 
 

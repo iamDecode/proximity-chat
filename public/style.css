@@ -98,6 +98,18 @@ nav ul li button.disabled:active {
   background: rgba(255,128,144,0.35);
 }
 
+nav ul li button.enabled {
+  color: #2ED35D;
+}
+
+nav ul li button.enabled:hover {
+  background: rgba(46,211,93,0.15);
+}
+
+nav ul li button.enabled:active {
+  background: rgba(46,211,93,0.35);
+}
+
 .preferences {
   pointer-events: none;
   opacity: 0;

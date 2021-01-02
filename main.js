@@ -86,6 +86,7 @@ const usocket = uws.SSLApp({key_file_name: keyFile, cert_file_name: certFile}).w
     ws.subscribe('join');
     ws.subscribe('leave');
     ws.subscribe('position');
+    ws.subscribe('broadcast');
 
     // ..and players info
     ws.send(JSON.stringify({
@@ -94,7 +95,7 @@ const usocket = uws.SSLApp({key_file_name: keyFile, cert_file_name: certFile}).w
         .map(u => ({id: u[1].id, pos: u[1].pos}))
     }));
 
-    const user = { id, ws, pos };
+    const user = { id, ws, pos, broadcast: false };
     user.emitPos = throttle((x, y) => {
       usocket.publish('position', String([id, x, y]));
     }, 25);
@@ -102,13 +103,26 @@ const usocket = uws.SSLApp({key_file_name: keyFile, cert_file_name: certFile}).w
     users[id] = user;
   },
   message: (ws, message, isBinary) => {
-    const [id, x, y] = Buffer.from(message).toString().split(",");
+    const components = Buffer.from(message).toString().split(",");
+
+    const id = components[0]
     const user = users[id]
-    if (user != null) {
-      user.pos.x = x;
-      user.pos.y = y;
-      user.emitPos(x, y); // emit the position, throttled
+    
+    if (user == null) { 
+      return 
     }
+
+    // Broadcast
+    if (components[1] == "broadcast") {
+      user.broadcast = components[2] === "true";
+      usocket.publish('broadcast', JSON.stringify({broadcast: {id: id, enabled: user.broadcast}}));
+      return;
+    }
+
+    // Position  
+    user.pos.x = parseInt(components[1]);
+    user.pos.y = parseInt(components[2]);
+    user.emitPos(user.pos.x, user.pos.y); // emit the position, throttled
   },
   close: (ws, code, message) => {
     const user = Object.values(users).find(u => u.ws === ws);
