@@ -45,17 +45,15 @@ const sprite = viewport.addChild(new PIXI.Sprite.from('public/assets/room.png'))
 
 
 class Player extends PIXI.Container {
-  constructor(id, avatar, pos, goal) {
+  constructor(id, avatar, pos) {
     super();
 
     this.id = id
     this.avatar = avatar
-    this.pos = pos
-    this.goal = goal
 
     // PIXI setup
-    this.x = goal.x;
-    this.y = goal.y;
+    this.x = pos.x;
+    this.y = pos.y;
     this.scale.set(0.5);
     this.size = 125
     const radius = this.size / 2
@@ -120,13 +118,6 @@ class Player extends PIXI.Container {
     this.stream.getVideoTracks().forEach(x => x.enabled = enabled)
   }
 
-  // updatePosition() {
-  //   const speed = 25
-  //   const delta = app.ticker.elapsedMS / 1000;
-  //   this.position.x += (this.goal.x - this.position.x) * speed * delta;
-  //   this.position.y += (this.goal.y - this.position.y) * speed * delta;
-  // }
-
   drawAudioRing(data) {
     const bottomCutoff = 0.4;
     const scale = Math.max(0 ,((Math.max(...data) / 255) - bottomCutoff) / (1 - bottomCutoff));
@@ -138,8 +129,6 @@ class Player extends PIXI.Container {
   }
 
   render(renderer) {
-    //this.updatePosition()
-
     if (this.stream) {
       if(this.analyser == null) {
         const track = this.stream.getAudioTracks()[0];
@@ -173,8 +162,8 @@ class Player extends PIXI.Container {
 }
 
 class SelfPlayer extends Player {
- constructor(id, avatar, pos, goal) {
-    super(id, avatar, pos, goal);
+ constructor(id, avatar, pos) {
+    super(id, avatar, pos);
 
     this.interactive = true
     this.buttonMode = true
@@ -220,10 +209,6 @@ class SelfPlayer extends Player {
       player.setPosition(player.x, player.y);
     })
   }
-
-  // updatePosition() {
-
-  // }
 
   onDragStart(event) {
     event.stopPropagation()
@@ -418,7 +403,6 @@ socket.onmessage = async (message) => {
       players[p.id] = new Player(
         p.id,
         0,
-        pos,
         pos
       );
     }
@@ -427,7 +411,7 @@ socket.onmessage = async (message) => {
   // talk to any user who joins
   else if ('join' in data) {
     console.log('calling', data.join.id);
-    players[data.join.id] = new Player(data.join.id, 0, data.join.pos, data.join.pos);
+    players[data.join.id] = new Player(data.join.id, 0, data.join.pos);
     startCall(data.join.id);
   }
 
