@@ -35,6 +35,7 @@ viewport
     .decelerate({friction: 0.93})
 
 viewport.on('drag-start', _ => {
+  document.querySelector('button.settings').classList.remove('notooltip')
   document.querySelector('.preferences').classList.remove('show')
 })
 
@@ -485,6 +486,7 @@ document.querySelector('button.cam').onclick = function() {
 };
 
 document.querySelector('button.settings').onclick = function() {
+  this.classList.toggle('notooltip')
   document.querySelector('.preferences').classList.toggle('show')
 };
 
