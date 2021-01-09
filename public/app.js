@@ -50,8 +50,8 @@ app.ticker.add(_ => {
 const viewport = new Viewport.Viewport({
     screenWidth: window.innerWidth,
     screenHeight: window.innerHeight,
-    worldWidth: 3200,
-    worldHeight: 1800,
+    worldWidth: 5120,
+    worldHeight: 2880,
     interaction: app.renderer.plugins.interaction
 })
 
@@ -64,8 +64,9 @@ viewport
     .pinch()
     .wheel()
     .clamp({direction: 'all'})
-    .clampZoom({maxWidth: 3200, maxHeight: 1800, minHeight: 250})
+    .clampZoom({maxWidth: 5120, maxHeight: 2880, minHeight: 250})
     .decelerate({friction: 0.93})
+    .moveCenter({x: 1400, y: 2880 - 200})
 
 viewport.on('drag-start', _ => {
   document.querySelector('button.settings').classList.remove('notooltip')
@@ -73,7 +74,10 @@ viewport.on('drag-start', _ => {
 })
 
 // add a red box
-const sprite = viewport.addChild(new PIXI.Sprite.from('public/assets/room.png'))
+const background = new PIXI.Sprite.from('public/assets/keizer.jpg')
+background.width = 5120
+background.height = 2880
+viewport.addChild(background)
 
 
 
@@ -547,7 +551,7 @@ function initSocket() {
       }
 
       const name = localStorage.getItem('name')
-      selfPlayer = new SelfPlayer(data.id, name, {x:100, y:100})
+      selfPlayer = new SelfPlayer(data.id, name, {x:1400, y:2880 - 200})
 
       setInterval(_ => {
         socket.send("ping")
