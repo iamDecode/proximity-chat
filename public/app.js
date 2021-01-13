@@ -138,7 +138,6 @@ class Player extends PIXI.Container {
     }
     
     // calulate angle and distance from listener to sound
-    const theta = Math.atan2(this.y - selfPlayer.y, this.x - selfPlayer.x);
     const dist = Math.hypot(this.y - selfPlayer.y, this.x - selfPlayer.x);
     const scale = 1 - (dist - SOUND_NEAR_RANGE) / (SOUND_CUTOFF_RANGE - SOUND_NEAR_RANGE);
 
