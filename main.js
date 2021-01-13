@@ -105,6 +105,11 @@ const usocket = uws.SSLApp({key_file_name: keyFile, cert_file_name: certFile}).w
   message: (ws, message, isBinary) => {
     const components = Buffer.from(message).toString().split(",");
 
+    if (components[0] == "ping") {
+      ws.send("pong");
+      return
+    }
+
     const id = components[0]
     const user = users[id]
     
