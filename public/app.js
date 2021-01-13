@@ -512,6 +512,28 @@ document.querySelector('button.broadcast').onclick = function() {
   socket.send([selfPlayer.id, "broadcast", selfPlayer.broadcast])
 };
 
+// Prevent browser zoom, zoom viewport instead
+document.body.addEventListener("wheel", e => {
+  if(e.ctrlKey) {
+    e.preventDefault();
+    e.stopPropagation();
+  }
+})
+document.onkeydown = function (e) {
+  e = e || window.event
+  const code = e.which || e.keyCode
+    
+  if (!(e.ctrlKey || e.metaKey)) return
+
+  if (code == 187 || code == 189) {
+    e.preventDefault();
+    e.stopPropagation();
+    const amount = (code == 189) ? -0.2 : 0.2
+    viewport.zoomPercent(amount, true)
+  }
+};
+
+
 
 
 // Device settings window
