@@ -546,9 +546,7 @@ const audioOutputSelect = document.querySelector('select#audioOutput');
 const videoSelect = document.querySelector('select#videoSource');
 let selectors = [audioInputSelect, audioOutputSelect, videoSelect];
 
-audioOutputSelect.disabled = !('sinkId' in HTMLMediaElement.prototype);
-if (audioOutputSelect.disabled) {
-  audioOutputSelect.querySelector('option').text = "No browser support"
+if (!('sinkId' in HTMLMediaElement.prototype)) {
   selectors = [audioInputSelect, videoSelect];
 }
 
