@@ -348,6 +348,7 @@ function iOS() {
 }
 
 let peer;
+let pendingJoins = [];
 
 // create peer, setup handlers
 function initPeer() {
@@ -363,6 +364,9 @@ function initPeer() {
     call.answer(selfPlayer.stream);
     receiveCall(call);
   });
+
+  pendingJoins.forEach(id => startCall(id))
+  pendingJoins = []
 }
 
 // start a call with target
@@ -443,7 +447,12 @@ socket.onmessage = async (message) => {
   else if ('join' in data) {
     console.log('calling', data.join.id);
     players[data.join.id] = new Player(data.join.id, 0, data.join.pos, false);
-    startCall(data.join.id);
+
+    if (selfPlayer == null || selfPlayer.stream == null) {
+      pendingJoins.push(data.join.id)
+    } else {
+      startCall(data.join.id)
+    }
   }
 
   // update player position
