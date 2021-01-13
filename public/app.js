@@ -569,7 +569,7 @@ function handleError(error) {
 
 async function getStream(constraints) {
   return await navigator.mediaDevices.getUserMedia(constraints).catch(err => {
-    if('video' in constraints && (err.name == 'NotAllowedError' || err.name === 'OverconstrainedError')) {
+    if('video' in constraints && ['NotAllowedError', 'OverconstrainedError', 'NotFoundError'].includes(err.name)) {
       delete constraints.video;
       return navigator.mediaDevices.getUserMedia(constraints)
     }
