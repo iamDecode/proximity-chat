@@ -3,6 +3,8 @@ const app = new PIXI.Application({
   width: window.innerWidth,
   height: window.innerHeight,
   antialias: true,
+  clearBeforeRender: false,
+  powerPreference: "high-performance",
   resizeTo: window
 })
 
