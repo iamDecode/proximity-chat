@@ -72,8 +72,12 @@ class Player extends PIXI.Container {
     this.addChild(this.sprite);
 
     this.border = new PIXI.Graphics();
-    this.border.lineStyle(radius * 0.04, 0xffffff, 1, 0)
-    this.border.arc(0, 0, radius, 0, 2*Math.PI)
+    this.border.beginFill(0xffffffff);
+    this.border.drawCircle(0, 0, radius);
+    this.border.endFill();
+    this.border.beginHole();
+    this.border.drawCircle(0, 0, radius*0.96);
+    this.border.endHole();
     this.addChild(this.border);
 
     const circle = new PIXI.Graphics();
