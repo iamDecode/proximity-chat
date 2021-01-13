@@ -405,6 +405,8 @@ socket.onmessage = async (message) => {
   let data;
   if (message.data[0] == "{") {
     data = JSON.parse(message.data)
+  } else if (message.data == "pong") {
+    return
   } else {
     data = {position: message.data.split(',')}
   }
@@ -419,6 +421,10 @@ socket.onmessage = async (message) => {
     }
 
     selfPlayer = new SelfPlayer(data.id, 0, {x:100, y:100}, {x:100, y:100})
+
+    setInterval(_ => {
+      socket.send("ping")
+    }, 10000)
   } 
 
   // Populate existing players
