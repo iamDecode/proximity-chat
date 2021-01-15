@@ -1,3 +1,32 @@
+let socket;
+if (localStorage.getItem('name') == null) {
+  const $modal = document.querySelector('#usernameModal')
+  const $button = $modal.querySelector('button')
+  const $input = $modal.querySelector('input')
+
+  const modal = new bootstrap.Modal($modal, {backdrop: 'static', keyboard: false, focus: false})
+
+  $input.oninput = function(e) {
+    $button.disabled = this.value == ""
+  }
+  $input.onkeyup = function(e) {
+    if (e.keyCode == 13 && this.value != "") {
+      e.preventDefault();
+      e.stopPropagation();
+      $button.onclick()
+    }
+  }
+
+  $button.onclick = function(e) {
+    localStorage.setItem('name', $input.value)
+    initSocket()
+    modal.hide()
+  }
+  modal.show()
+} else {
+  initSocket()
+}
+
 const app = new PIXI.Application({
   view: document.querySelector('canvas'),
   width: window.innerWidth,
@@ -286,8 +315,6 @@ let camEnabled = true;
 let SOUND_CUTOFF_RANGE = 350;
 let SOUND_NEAR_RANGE = 200;
 
-const socket = new WebSocket(`wss://${location.hostname}:9001`);
-
 // throttle a function
 const throttle = (func, limit) => {
   let lastFunc
@@ -410,85 +437,88 @@ function receiveCall(call) {
 }
 
 
-socket.onmessage = async (message) => {
-  let data;
-  if (message.data[0] == "{") {
-    data = JSON.parse(message.data)
-  } else if (message.data == "pong") {
-    return
-  } else {
-    data = {position: message.data.split(',')}
-  }
-
-  // setup peer when user receives id
-  if ('id' in data) {
-    if (selfPlayer != null) {
-      console.log('destroying old identity', selfPlayer.id, 'and replacing with', data.id);
-      peer.destroy();
-      peer = undefined;
-      return;
-    }
-
-    selfPlayer = new SelfPlayer(data.id, 0, {x:100, y:100}, {x:100, y:100})
-
-    setInterval(_ => {
-      socket.send("ping")
-    }, 10000)
-  } 
-
-  // Populate existing players
-  else if ('players' in data) {
-    for (const p of Object.values(data.players)) {
-      const pos = {x: parseInt(p.pos.x), y: parseInt(p.pos.y)}
-      players[p.id] = new Player(
-        p.id,
-        0,
-        pos,
-        p.broadcast
-      );
-    }
-  }
-
-  // talk to any user who joins
-  else if ('join' in data) {
-    console.log('calling', data.join.id);
-    players[data.join.id] = new Player(data.join.id, 0, data.join.pos, false);
-
-    if (selfPlayer == null || selfPlayer.stream == null) {
-      pendingJoins.push(data.join.id)
+function initSocket() {
+  socket = new WebSocket(`wss://${location.hostname}:9001`);
+  socket.onmessage = async (message) => {
+    let data;
+    if (message.data[0] == "{") {
+      data = JSON.parse(message.data)
+    } else if (message.data == "pong") {
+      return
     } else {
-      startCall(data.join.id)
+      data = {position: message.data.split(',')}
     }
-  }
 
-  // update player position
-  else if ('position' in data) {
-    if (data.position[0] in players) {
-      const player = players[data.position[0]];
-      player.setPosition(parseInt(data.position[1]), parseInt(data.position[2]));
+    // setup peer when user receives id
+    if ('id' in data) {
+      if (selfPlayer != null) {
+        console.log('destroying old identity', selfPlayer.id, 'and replacing with', data.id);
+        peer.destroy();
+        peer = undefined;
+        return;
+      }
+
+      selfPlayer = new SelfPlayer(data.id, 0, {x:100, y:100})
+
+      setInterval(_ => {
+        socket.send("ping")
+      }, 10000)
+    } 
+
+    // Populate existing players
+    else if ('players' in data) {
+      for (const p of Object.values(data.players)) {
+        const pos = {x: parseInt(p.pos.x), y: parseInt(p.pos.y)}
+        players[p.id] = new Player(
+          p.id,
+          0,
+          pos,
+          p.broadcast
+        );        
+      }
     }
-  }
 
-  // update player broadcast
-  else if ('broadcast' in data) {
-    if (data.broadcast.id in players) {
-      const player = players[data.broadcast.id];
-      player.setBroadcast(data.broadcast.enabled);
+    // talk to any user who joins
+    else if ('join' in data) {
+      console.log('calling', data.join.id);
+      players[data.join.id] = new Player(data.join.id, 0, data.join.pos, false);
+
+      if (selfPlayer == null || selfPlayer.stream == null) {
+        pendingJoins.push(data.join.id)
+      } else {
+        startCall(data.join.id)
+      }
     }
-  }
 
-  // remove players who left or disconnected
-  else if ('leave' in data) {
-    console.log('call dropped from', data.leave.id);
-    // remove player from players list
-    
-    if (data.leave.id in players) {
-      const player = players[data.leave.id];
-      viewport.removeChild(player)
-      delete players[player.id]
-    };
-  }
-};
+    // update player position
+    else if ('position' in data) {
+      if (data.position[0] in players) {
+        const player = players[data.position[0]];
+        player.setPosition(parseInt(data.position[1]), parseInt(data.position[2]));
+      }
+    }
+
+    // update player broadcast
+    else if ('broadcast' in data) {
+      if (data.broadcast.id in players) {
+        const player = players[data.broadcast.id];
+        player.setBroadcast(data.broadcast.enabled);
+      }
+    }
+
+    // remove players who left or disconnected
+    else if ('leave' in data) {
+      console.log('call dropped from', data.leave.id);
+      // remove player from players list
+      
+      if (data.leave.id in players) {
+        const player = players[data.leave.id];
+        viewport.removeChild(player)
+        delete players[player.id]
+      };
+    }
+  };
+}
 
 
 document.querySelector('button.mic').onclick = function() {
@@ -619,7 +649,6 @@ async function getStream(constraints) {
 audioOutputSelect.onchange = _ => {
   const audioDestination = audioOutputSelect.value;
   Object.values(players).forEach(player => {
-    console.log(player._videoElement)
     attachSinkId(player._videoElement, audioDestination);
   })
 }
