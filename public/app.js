@@ -77,12 +77,15 @@ const sprite = viewport.addChild(new PIXI.Sprite.from('public/assets/room.png'))
 
 
 class Player extends PIXI.Container {
-  constructor(id, avatar, pos, broadcast) {
+  constructor(id, name, pos, broadcast) {
     super();
 
     this.id = id
-    this.avatar = avatar
+    this.name = name
     this.broadcast = broadcast
+    this.audioEnabled = true
+    this.videoEnabled = true
+    this.theme = [0xa188a6,0x315867,0x2a9d8f,0x5a9fba,0xe9c46a,0xf4a261,0xe76f51]
 
     // PIXI setup
     this.x = pos.x;
@@ -95,7 +98,6 @@ class Player extends PIXI.Container {
     this.addChild(this.audioRing);
 
     this.sprite = new PIXI.Sprite(PIXI.Texture.WHITE);
-    this.sprite.tint = 0x000000;
     this.sprite.width = this.sprite.height = this.size;
     this.sprite.anchor.set(0.5);
     this.addChild(this.sprite);
@@ -108,6 +110,16 @@ class Player extends PIXI.Container {
     this.border.drawCircle(0, 0, radius*0.96);
     this.border.endHole();
     this.addChild(this.border);
+
+    this.avatar = new PIXI.Graphics()
+    this.avatar.beginFill(this.colorFor(name));
+    this.avatar.drawCircle(0, 0, radius*0.96);
+    this.avatar.endFill()
+    this.avatarText = new PIXI.Text(name[0].toUpperCase(), {fontFamily : 'Lato', fontSize: 40, fill : 0xffffff  })
+    this.avatarText.anchor.set(0.5)
+    this.avatarText.position.set(0)
+    this.avatar.addChild(this.avatarText)
+    this.addChild(this.avatar)
 
     const circle = new PIXI.Graphics();
     circle.beginFill(0xffffff);
@@ -134,6 +146,13 @@ class Player extends PIXI.Container {
     viewport.addChild(this)
   }
 
+  colorFor(name) {
+    // DJB2
+    const chars = name.toLowerCase().split('').map(str => str.charCodeAt(0))
+    const hash = chars.reduce((prev, curr) => ((prev << 5) + prev) + curr, 5381)
+    return this.theme[Math.abs(hash) % this.theme.length];
+  }
+
   addVideo(element) {
     this._videoElement = element
     this.scale.set(1);
@@ -141,7 +160,7 @@ class Player extends PIXI.Container {
     if(this.stream.getVideoTracks().length > 0) {
       const texture = PIXI.Texture.from(element);
       this.sprite.texture = texture;
-      this.sprite.tint = 0xffffff; // Removes the tint
+      setTimeout(_ => this.avatar.alpha = 0, 2000)
     }
   }
 
@@ -153,8 +172,8 @@ class Player extends PIXI.Container {
     if (this._videoElement != null) {
       this._videoElement.volume = volume;
       this._videoElement.muted = (volume == 0);
-      this.setMic(volume !== 0)
-      this.setCam(volume !== 0)
+      this.setMic(this.audioEnabled && volume !== 0)
+      this.setCam(this.videoEnabled && volume !== 0)
     }
 
     const scalar = (volume * (1 - 0.5)) + 0.5;;
@@ -188,11 +207,12 @@ class Player extends PIXI.Container {
   }
 
   setMic(enabled) {
-    this.stream.getAudioTracks().forEach(x => x.enabled = enabled)
+    this.audioEnabled = enabled
   }
 
   setCam(enabled) {
-    this.stream.getVideoTracks().forEach(x => x.enabled = enabled)
+    this.videoEnabled = enabled
+    this.avatar.alpha = enabled ? 0 : 1
   }
 
   drawAudioRing(data) {
@@ -239,8 +259,8 @@ class Player extends PIXI.Container {
 }
 
 class SelfPlayer extends Player {
- constructor(id, avatar, pos) {
-    super(id, avatar, pos, false);
+ constructor(id, name, pos) {
+    super(id, name, pos, false);
 
     this.interactive = true
     this.buttonMode = true
@@ -275,6 +295,16 @@ class SelfPlayer extends Player {
     playStream(stream, this);
 
     if(peer == null) initPeer();
+  }
+
+  setMic(enabled) {
+    super.setMic(enabled)
+    this.stream.getAudioTracks().forEach(x => x.enabled = enabled)
+  }
+
+  setCam(enabled) {
+    super.setCam(enabled)
+    this.stream.getVideoTracks().forEach(x => x.enabled = enabled)
   }
 
   setPosition(x, y) {
@@ -458,7 +488,8 @@ function initSocket() {
         return;
       }
 
-      selfPlayer = new SelfPlayer(data.id, 0, {x:100, y:100})
+      const name = localStorage.getItem('name')
+      selfPlayer = new SelfPlayer(data.id, name, {x:100, y:100})
 
       setInterval(_ => {
         socket.send("ping")
