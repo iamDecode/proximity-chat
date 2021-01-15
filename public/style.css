@@ -279,3 +279,17 @@ nav ul li button:not(.notooltip):hover::after, nav ul li button:not(.notooltip):
   margin-right: 8px;
   overflow: hidden;
 }
+
+.modal-content {
+  border-radius: .675rem;
+  box-shadow: 0 0 25px rgba(40, 47, 60, .05), 0 20px 25px rgba(40, 47, 60, .05), 0 3px 4px rgba(40, 47, 60, .05);
+  border: 1px solid rgba(0,0,0,0.15);
+  border-bottom: none;
+}
+
+.modal-header {
+  font-weight: bold !important;
+  border-top-left-radius: calc(.675rem - 1px);
+  border-top-right-radius: calc(.675rem - 1px);
+}
+
