@@ -90,7 +90,7 @@ class Player extends PIXI.Container {
     this.x = pos.x
     this.y = pos.y
     this.broadcast = false
-    this.audioEnabled = true
+    this._audioEnabled = true
     this._videoEnabled = true
   }
 
@@ -133,20 +133,22 @@ class Player extends PIXI.Container {
     this.addChild(circle);
     this.sprite.mask = circle;
 
-    const broadcastIcon = new PIXI.Container();
-    const broadcastText = new PIXI.Text('campaign', {fontFamily: 'Material Icons', fontSize: 24, fill: 0xffffff, align: 'center'})
-    const broadcastBg = new PIXI.Graphics();
-    broadcastBg.beginFill(0x00b385);
-    broadcastBg.drawCircle(12, 11, 18);
-    broadcastBg.endFill();
-    broadcastIcon.addChild(broadcastBg);
-    broadcastIcon.addChild(broadcastText);
-    broadcastIcon.x = 32;
-    broadcastIcon.y = 32;
-    broadcastIcon.scale.set(0.8);
-    broadcastIcon.alpha = 0
-    this.addChild(broadcastIcon);
-    this.broadcastIcon = broadcastIcon;
+    const icon = new PIXI.Container();
+    const iconText = new PIXI.Text('campaign', {fontFamily: 'Material Icons', fontSize: 24, fill: 0xffffff, align: 'center'})
+    const iconBg = new PIXI.Graphics();
+    iconBg.beginFill(0xffffff);
+    iconBg.drawCircle(12, 11, 18);
+    iconBg.endFill();
+    icon.addChild(iconBg);
+    icon.addChild(iconText);
+    icon.x = 32;
+    icon.y = 32;
+    icon.scale.set(0.8);
+    icon.alpha = 0
+    this.addChild(icon);
+    this.icon = icon;
+    this.iconText = iconText;
+    this.iconBg = iconBg;
 
     viewport.addChild(this)
   }
@@ -158,7 +160,10 @@ class Player extends PIXI.Container {
     if(this.stream.getVideoTracks().length > 0) {
       const texture = PIXI.Texture.from(element);
       this.sprite.texture = texture;
-      setTimeout(_ => this.avatar.alpha = 0, 2000)
+
+      if (this.videoEnabled) {
+        setTimeout(_ => this.avatar.alpha = 0, 2000)
+      }
     }
   }
 
@@ -194,7 +199,15 @@ class Player extends PIXI.Container {
 
   setBroadcast(enabled) {
     this.broadcast = enabled;
-    this.broadcastIcon.alpha = enabled ? 1 : 0;
+
+    if (enabled) {
+      this.iconText.text = "campaign"
+      this.iconBg.tint = 0x00b385
+      this.icon.alpha = 1
+    } else if (this.iconText.text == "campaign") {
+      this.icon.alpha = 0
+    }
+
     this.setPosition(this.x, this.y)  // To update scale
   }
 
@@ -222,6 +235,20 @@ class Player extends PIXI.Container {
   set name(value) {
     this._name = value
     this.avatarText.text = value[0].toUpperCase()
+  }
+
+  get audioEnabled() { return this._audioEnabled }
+  set audioEnabled(enabled) {
+    this._audioEnabled = enabled
+
+    if (!enabled) {
+      this.iconText.text = "mic_off"
+      this.iconBg.tint = 0xff586d
+      this.icon.alpha = 1
+    } else if (this.iconText.text == "mic_off") {
+      this.icon.alpha = 0
+    }
+    
   }
 
   get videoEnabled() { return this._videoEnabled }
@@ -537,7 +564,7 @@ function initSocket() {
         )
 
         player.audioEnabled = p.audioEnabled
-        player._videoEnabled = p.videoEnabled
+        player.videoEnabled = p.videoEnabled
         player.setBroadcast(p.broadcast)
 
         players[p.id] = player 
