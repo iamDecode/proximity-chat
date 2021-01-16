@@ -42,29 +42,47 @@
     </div>
 
     <div class="preferences">
-      <h2>Device settings</h2>
+      <h4>Device settings</h4>
 
-      <label>Microphone</label>
-      <i class="prefix material-icons">mic</i>
-      <select id="audioSource">
-        <option value>Default audio source</option>
-      </select>
+      <div class="form-group">
+        <label for="audioSource">Microphone</label>
 
-      <label>Output device</label>
-      <i class="prefix material-icons">volume_up</i>
-      <select id="audioOutput">
-        <option value>Default audio output</option>
-      </select>
+        <div class="input-group seamless mb-3">
+          <span class="input-group-text"><i class="material-icons">mic</i></span>
+          
+          <select class="form-select" id="audioSource">
+            <option value>Default audio source</option>
+          </select>
+        </div>
+      </div>
 
-      <label>Webcam</label>
-      <i class="prefix material-icons">videocam</i>
-      <select id="videoSource">
-        <option value>Default video source</option>
-      </select>
+      <div class="form-group">
+        <label for="audioOutput">Output device</label>
+
+        <div class="input-group seamless mb-3">
+          <span class="input-group-text"><i class="material-icons">volume_up</i></span>
+
+          <select class="form-select" id="audioOutput">
+            <option value>Default audio output</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="videoSource">Webcam</label>
+
+        <div class="input-group seamless mb-3">
+          <span class="input-group-text"><i class="material-icons">videocam</i></span>
+
+          <select class="form-select" id="videoSource">
+            <option value>Default video source</option>
+          </select>
+        </div>
+      </div>
     </div>
     
     <link rel="preconnect" href="https://fonts.gstatic.com">
-    <link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@400;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta1/dist/js/bootstrap.bundle.min.js" integrity="sha384-ygbV9kiqUc6oa4msXn9868pTtWMgiQaeYH7/t7LECLbyPA2x65Kgf80OJFdroafW" crossorigin="anonymous"></script>
     <script src="public/app.js"></script>
