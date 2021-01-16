@@ -77,19 +77,22 @@ const sprite = viewport.addChild(new PIXI.Sprite.from('public/assets/room.png'))
 
 
 class Player extends PIXI.Container {
-  constructor(id, name, pos, broadcast) {
+  constructor(id, name, pos) {
     super();
+
+    this.color = colorFor(name)
+    this.setupPixi()
 
     this.id = id
     this.name = name
-    this.broadcast = broadcast
+    this.x = pos.x
+    this.y = pos.y
+    this.broadcast = false
     this.audioEnabled = true
-    this.videoEnabled = true
-    this.theme = [0xa188a6,0x315867,0x2a9d8f,0x5a9fba,0xe9c46a,0xf4a261,0xe76f51]
+    this._videoEnabled = true
+  }
 
-    // PIXI setup
-    this.x = pos.x;
-    this.y = pos.y;
+  setupPixi() {
     this.scale.set(0.5);
     this.size = 125
     const radius = this.size / 2
@@ -112,10 +115,10 @@ class Player extends PIXI.Container {
     this.addChild(this.border);
 
     this.avatar = new PIXI.Graphics()
-    this.avatar.beginFill(this.colorFor(name));
+    this.avatar.beginFill(this.color);
     this.avatar.drawCircle(0, 0, radius*0.96);
     this.avatar.endFill()
-    this.avatarText = new PIXI.Text(name[0].toUpperCase(), {fontFamily : 'Lato', fontSize: 40, fill : 0xffffff  })
+    this.avatarText = new PIXI.Text("", {fontFamily : 'Lato', fontSize: 40, fill : 0xffffff  })
     this.avatarText.anchor.set(0.5)
     this.avatarText.position.set(0)
     this.avatar.addChild(this.avatarText)
@@ -139,18 +142,11 @@ class Player extends PIXI.Container {
     broadcastIcon.x = 32;
     broadcastIcon.y = 32;
     broadcastIcon.scale.set(0.8);
-    broadcastIcon.alpha = broadcast ? 1 : 0;
+    broadcastIcon.alpha = 0
     this.addChild(broadcastIcon);
     this.broadcastIcon = broadcastIcon;
 
     viewport.addChild(this)
-  }
-
-  colorFor(name) {
-    // DJB2
-    const chars = name.toLowerCase().split('').map(str => str.charCodeAt(0))
-    const hash = chars.reduce((prev, curr) => ((prev << 5) + prev) + curr, 5381)
-    return this.theme[Math.abs(hash) % this.theme.length];
   }
 
   addVideo(element) {
@@ -164,6 +160,14 @@ class Player extends PIXI.Container {
     }
   }
 
+  setMic(enabled) {
+    this.stream.getAudioTracks().forEach(x => x.enabled = enabled)
+  }
+
+  setCam(enabled) {
+    this.stream.getVideoTracks().forEach(x => x.enabled = enabled)
+  }
+
   setPosition(x, y) {
     this.x = x;
     this.y = y;
@@ -171,9 +175,15 @@ class Player extends PIXI.Container {
     let volume = this.calcVolume()
     if (this._videoElement != null) {
       this._videoElement.volume = volume;
-      this._videoElement.muted = (volume == 0);
-      this.setMic(this.audioEnabled && volume !== 0)
-      this.setCam(this.videoEnabled && volume !== 0)
+
+      const enabled = volume !== 0
+      this._videoElement.muted = enabled;
+      this.setMic(enabled)
+      this.setCam(enabled)
+
+      if (this.videoEnabled) {
+        this.avatar.alpha = enabled ? 0 : 1
+      }
     }
 
     const scalar = (volume * (1 - 0.5)) + 0.5;;
@@ -206,12 +216,15 @@ class Player extends PIXI.Container {
     return scale;
   }
 
-  setMic(enabled) {
-    this.audioEnabled = enabled
+  get name() { return this._name }
+  set name(value) {
+    this._name = value
+    this.avatarText.text = value[0].toUpperCase()
   }
 
-  setCam(enabled) {
-    this.videoEnabled = enabled
+  get videoEnabled() { return this._videoEnabled }
+  set videoEnabled(enabled) {
+    this._videoEnabled = enabled
     this.avatar.alpha = enabled ? 0 : 1
   }
 
@@ -220,7 +233,7 @@ class Player extends PIXI.Container {
     const scale = Math.max(0 ,((Math.max(...data) / 255) - bottomCutoff) / (1 - bottomCutoff));
     const width = (scale * 0.2) + 1;
     this.audioRing.clear();
-    this.audioRing.beginFill(0xa3f5aa, Math.min(1, scale + 0.4))
+    this.audioRing.beginFill(lighten(this.color, 60), Math.min(1, scale + 0.4))
     this.audioRing.drawCircle(0, 0, (this.size / 2) * width);
     this.audioRing.endFill();
   }
@@ -260,7 +273,7 @@ class Player extends PIXI.Container {
 
 class SelfPlayer extends Player {
  constructor(id, name, pos) {
-    super(id, name, pos, false);
+    super(id, name, pos);
 
     this.interactive = true
     this.buttonMode = true
@@ -299,12 +312,19 @@ class SelfPlayer extends Player {
 
   setMic(enabled) {
     super.setMic(enabled)
-    this.stream.getAudioTracks().forEach(x => x.enabled = enabled)
+    this.audioEnabled = enabled
+    this.sync()
   }
 
   setCam(enabled) {
     super.setCam(enabled)
-    this.stream.getVideoTracks().forEach(x => x.enabled = enabled)
+    this.videoEnabled = enabled
+    this.sync()
+  }
+
+  setBroadcast(enabled) {
+    super.setBroadcast(enabled)
+    this.sync()
   }
 
   setPosition(x, y) {
@@ -333,7 +353,11 @@ class SelfPlayer extends Player {
     event.stopPropagation()
     const newPosition = this.data.getLocalPosition(this.parent);
     this.setPosition(newPosition.x, newPosition.y);
-  } 
+  }
+
+  sync() {
+    socket.send([this.id, "update",  this.name, this.audioEnabled, this.videoEnabled, this.broadcast])
+  }
 }
 
 
@@ -365,6 +389,33 @@ const throttle = (func, limit) => {
       }, limit - (Date.now() - lastRan))
     }
   }
+}
+
+const colorFor = (name) => {
+  // DJB2
+  const colors = [0xa188a6,0x315867,0x2a9d8f,0x5a9fba,0xe9c46a,0xf4a261,0xe76f51]
+  const chars = name.toLowerCase().split('').map(str => str.charCodeAt(0))
+  const hash = chars.reduce((prev, curr) => ((prev << 5) + prev) + curr, 5381)
+  return colors[Math.abs(hash) % colors.length];
+}
+
+function lighten(num, amt) {
+    var r = (num >> 16) + amt;
+    if (r > 255)
+        r = 255;
+    else if (r < 0)
+        r = 0;
+    var b = ((num >> 8) & 0x00FF) + amt;
+    if (b > 255)
+        b = 255;
+    else if (b < 0)
+        b = 0;
+    var g = (num & 0x0000FF) + amt;
+    if (g > 255)
+        g = 255;
+    else if (g < 0)
+        g = 0;
+    return (g | (b << 8) | (r << 16));
 }
 
 let selfPlayer;
@@ -499,20 +550,24 @@ function initSocket() {
     // Populate existing players
     else if ('players' in data) {
       for (const p of Object.values(data.players)) {
-        const pos = {x: parseInt(p.pos.x), y: parseInt(p.pos.y)}
-        players[p.id] = new Player(
+        const player = new Player(
           p.id,
-          0,
-          pos,
-          p.broadcast
-        );        
+          p.name,
+          {x: parseInt(p.pos.x), y: parseInt(p.pos.y)}
+        )
+
+        player.audioEnabled = p.audioEnabled
+        player._videoEnabled = p.videoEnabled
+        player.setBroadcast(p.broadcast)
+
+        players[p.id] = player 
       }
     }
 
     // talk to any user who joins
     else if ('join' in data) {
       console.log('calling', data.join.id);
-      players[data.join.id] = new Player(data.join.id, 0, data.join.pos, false);
+      players[data.join.id] = new Player(data.join.id, data.join.name, data.join.pos);
 
       if (selfPlayer == null || selfPlayer.stream == null) {
         pendingJoins.push(data.join.id)
@@ -529,11 +584,14 @@ function initSocket() {
       }
     }
 
-    // update player broadcast
-    else if ('broadcast' in data) {
-      if (data.broadcast.id in players) {
-        const player = players[data.broadcast.id];
-        player.setBroadcast(data.broadcast.enabled);
+    // update player properties
+    else if ('update' in data) {
+      if (data.update.id in players) {
+        const player = players[data.update.id];
+        player.name = data.update.name;
+        player.audioEnabled = data.update.audioEnabled
+        player.videoEnabled = data.update.videoEnabled
+        player.setBroadcast(data.update.broadcast);
       }
     }
 
@@ -549,6 +607,10 @@ function initSocket() {
       };
     }
   };
+
+  socket.onopen = event => {
+    socket.send(['connect', localStorage.getItem('name')])
+  }
 }
 
 
@@ -574,7 +636,6 @@ document.querySelector('button.settings').onclick = function() {
 document.querySelector('button.broadcast').onclick = function() {
   this.classList.toggle('enabled')
   selfPlayer.setBroadcast(!selfPlayer.broadcast)
-  socket.send([selfPlayer.id, "broadcast", selfPlayer.broadcast])
 };
 
 // Prevent browser zoom, zoom viewport instead
