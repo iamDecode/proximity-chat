@@ -118,7 +118,7 @@ class Player extends PIXI.Container {
     this.avatar.beginFill(this.color);
     this.avatar.drawCircle(0, 0, radius*0.96);
     this.avatar.endFill()
-    this.avatarText = new PIXI.Text("", {fontFamily : 'Lato', fontSize: 40, fill : 0xffffff  })
+    this.avatarText = new PIXI.Text("", {fontFamily : 'Nunito Sans', fontSize: 40, fontWeight: 'bold', fill : 0xffffff  })
     this.avatarText.anchor.set(0.5)
     this.avatarText.position.set(0)
     this.avatar.addChild(this.avatarText)
