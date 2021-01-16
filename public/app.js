@@ -34,6 +34,8 @@ const app = new PIXI.Application({
   antialias: true,
   clearBeforeRender: false,
   powerPreference: "high-performance",
+  resolution: window.devicePixelRatio,
+  autoResize: true,
   resizeTo: window
 })
 
@@ -291,9 +293,9 @@ class SelfPlayer extends Player {
       .on('mousemove', this.onDragMove)
       .on('touchmove', this.onDragMove);
 
-    this.sendPos = throttle((id, x, y) => {
+    this.sendPos = (id, x, y) => {
       socket.send([id, Math.round(x), Math.round(y)])
-    }, 25);
+    }
 
     this.initStream();
   }
@@ -368,28 +370,6 @@ let micEnabled = true;
 let camEnabled = true;
 let SOUND_CUTOFF_RANGE = 350;
 let SOUND_NEAR_RANGE = 200;
-
-// throttle a function
-const throttle = (func, limit) => {
-  let lastFunc
-  let lastRan
-  return function() {
-    const context = this
-    const args = arguments
-    if (!lastRan) {
-      func.apply(context, args)
-      lastRan = Date.now()
-    } else {
-      clearTimeout(lastFunc)
-      lastFunc = setTimeout(function() {
-        if ((Date.now() - lastRan) >= limit) {
-          func.apply(context, args)
-          lastRan = Date.now()
-        }
-      }, limit - (Date.now() - lastRan))
-    }
-  }
-}
 
 const colorFor = (name) => {
   // DJB2
