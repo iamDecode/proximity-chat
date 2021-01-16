@@ -70,43 +70,53 @@ const users = {};
 
 // handle socket connection
 const usocket = uws.SSLApp({key_file_name: keyFile, cert_file_name: certFile}).ws('/*', {
-  open: (ws) => {
-    const id = uuidv4();
-    const pos = {x: 100, y: 100};
-    
-    console.log('user connected', id);
-
-    // Tell user his or her id
-    ws.send(JSON.stringify({'id': id}));
-
-    // Tell the other users to connect to this user
-    usocket.publish('join', JSON.stringify({join: {id: id, pos: pos}}));
-
-    // Let this client listen to join, leave, and position broadcasts
-    ws.subscribe('join');
-    ws.subscribe('leave');
-    ws.subscribe('position');
-    ws.subscribe('broadcast');
-
-    // ..and players info
-    ws.send(JSON.stringify({
-      'players': Object.entries(users)
-        .filter(u => u[0] !== id)
-        .map(u => ({id: u[1].id, pos: u[1].pos, broadcast: u[1].broadcast}))
-    }));
-
-    const user = { id, ws, pos, broadcast: false };
-    user.emitPos = throttle((x, y) => {
-      usocket.publish('position', String([id, x, y]));
-    }, 25);
-
-    users[id] = user;
-  },
   message: (ws, message, isBinary) => {
     const components = Buffer.from(message).toString().split(",");
 
     if (components[0] == "ping") {
       ws.send("pong");
+      return
+    }
+
+    if (components[0] == "connect") {
+      const id = uuidv4();
+      const pos = {x: 100, y: 100};
+      const name = components[1];
+      
+      console.log('user connected', id);
+
+      // Tell user his or her id
+      ws.send(JSON.stringify({'id': id}));
+
+      // Tell the other users to connect to this user
+      usocket.publish('join', JSON.stringify({join: {id: id, name: name, pos: pos}}));
+
+      // Let this client listen to join, leave, and position broadcasts
+      ws.subscribe('join');
+      ws.subscribe('leave');
+      ws.subscribe('position');
+      ws.subscribe('update');
+
+      // ..and players info
+      ws.send(JSON.stringify({
+        'players': Object.entries(users)
+          .filter(u => u[0] !== id)
+          .map(u => ({
+            id: u[1].id, 
+            name: u[1].name, 
+            audioEnabled: u[1].audioEnabled,
+            videoEnabled: u[1].videoEnabled,
+            pos: u[1].pos, 
+            broadcast: u[1].broadcast
+          }))
+      }));
+
+      const user = { ws, id, name, audioEnabled: true, videoEnabled: true, pos, broadcast: false };
+      user.emitPos = throttle((x, y) => {
+        usocket.publish('position', String([id, x, y]));
+      }, 25);
+
+      users[id] = user;
       return
     }
 
@@ -117,10 +127,21 @@ const usocket = uws.SSLApp({key_file_name: keyFile, cert_file_name: certFile}).w
       return 
     }
 
-    // Broadcast
-    if (components[1] == "broadcast") {
-      user.broadcast = components[2] === "true";
-      usocket.publish('broadcast', JSON.stringify({broadcast: {id: id, enabled: user.broadcast}}));
+    // Update
+    if (components[1] == "update") {
+      user.name = components[2];
+      user.audioEnabled = components[3] === "true";
+      user.videoEnabled = components[4] === "true";
+      user.broadcast = components[5] === "true";
+      usocket.publish('update', JSON.stringify({
+        update: {
+          id: user.id, 
+          name: user.name, 
+          audioEnabled: user.audioEnabled, 
+          videoEnabled: user.videoEnabled, 
+          broadcast: user.broadcast
+        }
+      }));
       return;
     }
 
@@ -131,13 +152,16 @@ const usocket = uws.SSLApp({key_file_name: keyFile, cert_file_name: certFile}).w
   },
   close: (ws, code, message) => {
     const user = Object.values(users).find(u => u.ws === ws);
-    console.log('user disconnected', user.id);
 
-    // let other users know to disconnect this client
-    usocket.publish('leave', JSON.stringify({leave: {id: user.id}}));
+    if (user != null) {
+      console.log('user disconnected', user.id);
 
-    // remove the user from the users list
-    delete users[user.id]
+      // let other users know to disconnect this client
+      usocket.publish('leave', JSON.stringify({leave: {id: user.id}}));
+
+      // remove the user from the users list
+      delete users[user.id]
+    }
   }
 }).listen(9001, (token) => {
   if (token) {
