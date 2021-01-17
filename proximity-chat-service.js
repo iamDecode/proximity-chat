@@ -11,10 +11,10 @@ class ProximityChatService {
   
   // WebSockets calls handlers in a funny way that doesn't set `this`, so bind
   // those explicitly.
-  AsWebSocketBehavior() {
+  asWebSocketBehavior() {
     return {
-      message: ProximityChatService.prototype.message.bind(this),
-      close: ProximityChatService.prototype.close.bind(this),
+      message: (...args) => this.message(...args),
+      close: (...args) => this.close(...args),
     }
   }
 
