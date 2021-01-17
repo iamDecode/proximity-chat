@@ -606,17 +606,6 @@ uuid@^8.3.0:
   resolved "https://registry.yarnpkg.com/uuid/-/uuid-8.3.2.tgz#80d5b5ced271bb9af6c445f21a1a04c606cefbe2"
   integrity sha512-+NYs2QeMWy+GWFOEm9xnn6HCDp0l7QBD7ml8zLUmJ+93Q5NF0NocErnwkTkXVFNiX3/fpC6afS8Dhb/gz7R7eg==
 
-uwebsockets.js@^18.3.3:
-  version "18.3.3"
-  resolved "https://registry.yarnpkg.com/uwebsockets.js/-/uwebsockets.js-18.3.3.tgz#5095a0afffc9e29c7e72e7a040845655465f4a49"
-  integrity sha512-6a5tlxxSapfLECQTVBIqzm7VkX+qR09/UrGDx3MmrAqFq0B3cqRpw4pUu0ewjnJhdoY6Cu9tlTZUnErP/7Ukqw==
-  dependencies:
-    uws.js "https://github.com/uNetworking/uWebSockets.js#v18.3.0"
-
-"uws.js@https://github.com/uNetworking/uWebSockets.js#v18.3.0":
-  version "18.3.0"
-  resolved "https://github.com/uNetworking/uWebSockets.js#63c610cefde1ef71c27cba6dd1072495977ee34d"
-
 vary@^1, vary@~1.1.2:
   version "1.1.2"
   resolved "https://registry.yarnpkg.com/vary/-/vary-1.1.2.tgz#2299f02c6ded30d4a5961b0b9f74524a18f634fc"
