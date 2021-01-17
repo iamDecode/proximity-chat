@@ -1,3 +1,32 @@
+let socket;
+if (localStorage.getItem('name') == null) {
+  const $modal = document.querySelector('#usernameModal')
+  const $button = $modal.querySelector('button')
+  const $input = $modal.querySelector('input')
+
+  const modal = new bootstrap.Modal($modal, {backdrop: 'static', keyboard: false, focus: false})
+
+  $input.oninput = function(e) {
+    $button.disabled = this.value == ""
+  }
+  $input.onkeyup = function(e) {
+    if (e.keyCode == 13 && this.value != "") {
+      e.preventDefault();
+      e.stopPropagation();
+      $button.onclick()
+    }
+  }
+
+  $button.onclick = function(e) {
+    localStorage.setItem('name', $input.value)
+    initSocket()
+    modal.hide()
+  }
+  modal.show()
+} else {
+  initSocket()
+}
+
 const app = new PIXI.Application({
   view: document.querySelector('canvas'),
   width: window.innerWidth,
@@ -5,6 +34,8 @@ const app = new PIXI.Application({
   antialias: true,
   clearBeforeRender: false,
   powerPreference: "high-performance",
+  resolution: window.devicePixelRatio,
+  autoResize: true,
   resizeTo: window
 })
 
@@ -48,16 +79,22 @@ const sprite = viewport.addChild(new PIXI.Sprite.from('public/assets/room.png'))
 
 
 class Player extends PIXI.Container {
-  constructor(id, avatar, pos, broadcast) {
+  constructor(id, name, pos) {
     super();
 
-    this.id = id
-    this.avatar = avatar
-    this.broadcast = broadcast
+    this.color = colorFor(name)
+    this.setupPixi()
 
-    // PIXI setup
-    this.x = pos.x;
-    this.y = pos.y;
+    this.id = id
+    this.name = name
+    this.x = pos.x
+    this.y = pos.y
+    this.broadcast = false
+    this._audioEnabled = true
+    this._videoEnabled = true
+  }
+
+  setupPixi() {
     this.scale.set(0.5);
     this.size = 125
     const radius = this.size / 2
@@ -66,7 +103,6 @@ class Player extends PIXI.Container {
     this.addChild(this.audioRing);
 
     this.sprite = new PIXI.Sprite(PIXI.Texture.WHITE);
-    this.sprite.tint = 0x000000;
     this.sprite.width = this.sprite.height = this.size;
     this.sprite.anchor.set(0.5);
     this.addChild(this.sprite);
@@ -80,6 +116,16 @@ class Player extends PIXI.Container {
     this.border.endHole();
     this.addChild(this.border);
 
+    this.avatar = new PIXI.Graphics()
+    this.avatar.beginFill(this.color);
+    this.avatar.drawCircle(0, 0, radius*0.96);
+    this.avatar.endFill()
+    this.avatarText = new PIXI.Text("", {fontFamily : 'Nunito Sans', fontSize: 40, fontWeight: 'bold', fill : 0xffffff  })
+    this.avatarText.anchor.set(0.5)
+    this.avatarText.position.set(0)
+    this.avatar.addChild(this.avatarText)
+    this.addChild(this.avatar)
+
     const circle = new PIXI.Graphics();
     circle.beginFill(0xffffff);
     circle.drawCircle(0, 0, radius);
@@ -87,20 +133,22 @@ class Player extends PIXI.Container {
     this.addChild(circle);
     this.sprite.mask = circle;
 
-    const broadcastIcon = new PIXI.Container();
-    const broadcastText = new PIXI.Text('campaign', {fontFamily: 'Material Icons', fontSize: 24, fill: 0xffffff, align: 'center'})
-    const broadcastBg = new PIXI.Graphics();
-    broadcastBg.beginFill(0x00b385);
-    broadcastBg.drawCircle(12, 11, 18);
-    broadcastBg.endFill();
-    broadcastIcon.addChild(broadcastBg);
-    broadcastIcon.addChild(broadcastText);
-    broadcastIcon.x = 32;
-    broadcastIcon.y = 32;
-    broadcastIcon.scale.set(0.8);
-    broadcastIcon.alpha = broadcast ? 1 : 0;
-    this.addChild(broadcastIcon);
-    this.broadcastIcon = broadcastIcon;
+    const icon = new PIXI.Container();
+    const iconText = new PIXI.Text('campaign', {fontFamily: 'Material Icons', fontSize: 24, fill: 0xffffff, align: 'center'})
+    const iconBg = new PIXI.Graphics();
+    iconBg.beginFill(0xffffff);
+    iconBg.drawCircle(12, 11, 18);
+    iconBg.endFill();
+    icon.addChild(iconBg);
+    icon.addChild(iconText);
+    icon.x = 32;
+    icon.y = 32;
+    icon.scale.set(0.8);
+    icon.alpha = 0
+    this.addChild(icon);
+    this.icon = icon;
+    this.iconText = iconText;
+    this.iconBg = iconBg;
 
     viewport.addChild(this)
   }
@@ -112,8 +160,19 @@ class Player extends PIXI.Container {
     if(this.stream.getVideoTracks().length > 0) {
       const texture = PIXI.Texture.from(element);
       this.sprite.texture = texture;
-      this.sprite.tint = 0xffffff; // Removes the tint
+
+      if (this.videoEnabled) {
+        setTimeout(_ => this.avatar.alpha = 0, 2000)
+      }
     }
+  }
+
+  setMic(enabled) {
+    this.stream.getAudioTracks().forEach(x => x.enabled = enabled)
+  }
+
+  setCam(enabled) {
+    this.stream.getVideoTracks().forEach(x => x.enabled = enabled)
   }
 
   setPosition(x, y) {
@@ -123,9 +182,15 @@ class Player extends PIXI.Container {
     let volume = this.calcVolume()
     if (this._videoElement != null) {
       this._videoElement.volume = volume;
-      this._videoElement.muted = (volume == 0);
-      this.setMic(volume !== 0)
-      this.setCam(volume !== 0)
+
+      const enabled = volume !== 0
+      this._videoElement.muted = enabled;
+      this.setMic(enabled)
+      this.setCam(enabled)
+
+      if (this.videoEnabled) {
+        this.avatar.alpha = enabled ? 0 : 1
+      }
     }
 
     const scalar = (volume * (1 - 0.5)) + 0.5;;
@@ -134,7 +199,15 @@ class Player extends PIXI.Container {
 
   setBroadcast(enabled) {
     this.broadcast = enabled;
-    this.broadcastIcon.alpha = enabled ? 1 : 0;
+
+    if (enabled) {
+      this.iconText.text = "campaign"
+      this.iconBg.tint = 0x00b385
+      this.icon.alpha = 1
+    } else if (this.iconText.text == "campaign") {
+      this.icon.alpha = 0
+    }
+
     this.setPosition(this.x, this.y)  // To update scale
   }
 
@@ -158,12 +231,30 @@ class Player extends PIXI.Container {
     return scale;
   }
 
-  setMic(enabled) {
-    this.stream.getAudioTracks().forEach(x => x.enabled = enabled)
+  get name() { return this._name }
+  set name(value) {
+    this._name = value
+    this.avatarText.text = value[0].toUpperCase()
   }
 
-  setCam(enabled) {
-    this.stream.getVideoTracks().forEach(x => x.enabled = enabled)
+  get audioEnabled() { return this._audioEnabled }
+  set audioEnabled(enabled) {
+    this._audioEnabled = enabled
+
+    if (!enabled) {
+      this.iconText.text = "mic_off"
+      this.iconBg.tint = 0xff586d
+      this.icon.alpha = 1
+    } else if (this.iconText.text == "mic_off") {
+      this.icon.alpha = 0
+    }
+    
+  }
+
+  get videoEnabled() { return this._videoEnabled }
+  set videoEnabled(enabled) {
+    this._videoEnabled = enabled
+    this.avatar.alpha = enabled ? 0 : 1
   }
 
   drawAudioRing(data) {
@@ -171,7 +262,7 @@ class Player extends PIXI.Container {
     const scale = Math.max(0 ,((Math.max(...data) / 255) - bottomCutoff) / (1 - bottomCutoff));
     const width = (scale * 0.2) + 1;
     this.audioRing.clear();
-    this.audioRing.beginFill(0xa3f5aa, Math.min(1, scale + 0.4))
+    this.audioRing.beginFill(lighten(this.color, 60), Math.min(1, scale + 0.4))
     this.audioRing.drawCircle(0, 0, (this.size / 2) * width);
     this.audioRing.endFill();
   }
@@ -210,8 +301,8 @@ class Player extends PIXI.Container {
 }
 
 class SelfPlayer extends Player {
- constructor(id, avatar, pos) {
-    super(id, avatar, pos, false);
+ constructor(id, name, pos) {
+    super(id, name, pos);
 
     this.interactive = true
     this.buttonMode = true
@@ -229,9 +320,9 @@ class SelfPlayer extends Player {
       .on('mousemove', this.onDragMove)
       .on('touchmove', this.onDragMove);
 
-    this.sendPos = throttle((id, x, y) => {
+    this.sendPos = (id, x, y) => {
       socket.send([id, Math.round(x), Math.round(y)])
-    }, 25);
+    }
 
     this.initStream();
   }
@@ -246,6 +337,23 @@ class SelfPlayer extends Player {
     playStream(stream, this);
 
     if(peer == null) initPeer();
+  }
+
+  setMic(enabled) {
+    super.setMic(enabled)
+    this.audioEnabled = enabled
+    this.sync()
+  }
+
+  setCam(enabled) {
+    super.setCam(enabled)
+    this.videoEnabled = enabled
+    this.sync()
+  }
+
+  setBroadcast(enabled) {
+    super.setBroadcast(enabled)
+    this.sync()
   }
 
   setPosition(x, y) {
@@ -274,7 +382,11 @@ class SelfPlayer extends Player {
     event.stopPropagation()
     const newPosition = this.data.getLocalPosition(this.parent);
     this.setPosition(newPosition.x, newPosition.y);
-  } 
+  }
+
+  sync() {
+    socket.send([this.id, "update",  this.name, this.audioEnabled, this.videoEnabled, this.broadcast])
+  }
 }
 
 
@@ -286,28 +398,31 @@ let camEnabled = true;
 let SOUND_CUTOFF_RANGE = 350;
 let SOUND_NEAR_RANGE = 200;
 
-const socket = new WebSocket(`wss://${location.hostname}:9001`);
+const colorFor = (name) => {
+  // DJB2
+  const colors = [0xa188a6,0x315867,0x2a9d8f,0x5a9fba,0xe9c46a,0xf4a261,0xe76f51]
+  const chars = name.toLowerCase().split('').map(str => str.charCodeAt(0))
+  const hash = chars.reduce((prev, curr) => ((prev << 5) + prev) + curr, 5381)
+  return colors[Math.abs(hash) % colors.length];
+}
 
-// throttle a function
-const throttle = (func, limit) => {
-  let lastFunc
-  let lastRan
-  return function() {
-    const context = this
-    const args = arguments
-    if (!lastRan) {
-      func.apply(context, args)
-      lastRan = Date.now()
-    } else {
-      clearTimeout(lastFunc)
-      lastFunc = setTimeout(function() {
-        if ((Date.now() - lastRan) >= limit) {
-          func.apply(context, args)
-          lastRan = Date.now()
-        }
-      }, limit - (Date.now() - lastRan))
-    }
-  }
+function lighten(num, amt) {
+    var r = (num >> 16) + amt;
+    if (r > 255)
+        r = 255;
+    else if (r < 0)
+        r = 0;
+    var b = ((num >> 8) & 0x00FF) + amt;
+    if (b > 255)
+        b = 255;
+    else if (b < 0)
+        b = 0;
+    var g = (num & 0x0000FF) + amt;
+    if (g > 255)
+        g = 255;
+    else if (g < 0)
+        g = 0;
+    return (g | (b << 8) | (r << 16));
 }
 
 let selfPlayer;
@@ -410,85 +525,100 @@ function receiveCall(call) {
 }
 
 
-socket.onmessage = async (message) => {
-  let data;
-  if (message.data[0] == "{") {
-    data = JSON.parse(message.data)
-  } else if (message.data == "pong") {
-    return
-  } else {
-    data = {position: message.data.split(',')}
-  }
-
-  // setup peer when user receives id
-  if ('id' in data) {
-    if (selfPlayer != null) {
-      console.log('destroying old identity', selfPlayer.id, 'and replacing with', data.id);
-      peer.destroy();
-      peer = undefined;
-      return;
-    }
-
-    selfPlayer = new SelfPlayer(data.id, 0, {x:100, y:100}, {x:100, y:100})
-
-    setInterval(_ => {
-      socket.send("ping")
-    }, 10000)
-  } 
-
-  // Populate existing players
-  else if ('players' in data) {
-    for (const p of Object.values(data.players)) {
-      const pos = {x: parseInt(p.pos.x), y: parseInt(p.pos.y)}
-      players[p.id] = new Player(
-        p.id,
-        0,
-        pos,
-        p.broadcast
-      );
-    }
-  }
-
-  // talk to any user who joins
-  else if ('join' in data) {
-    console.log('calling', data.join.id);
-    players[data.join.id] = new Player(data.join.id, 0, data.join.pos, false);
-
-    if (selfPlayer == null || selfPlayer.stream == null) {
-      pendingJoins.push(data.join.id)
+function initSocket() {
+  socket = new WebSocket(`wss://${location.hostname}:9001`);
+  socket.onmessage = async (message) => {
+    let data;
+    if (message.data[0] == "{") {
+      data = JSON.parse(message.data)
+    } else if (message.data == "pong") {
+      return
     } else {
-      startCall(data.join.id)
+      data = {position: message.data.split(',')}
     }
-  }
 
-  // update player position
-  else if ('position' in data) {
-    if (data.position[0] in players) {
-      const player = players[data.position[0]];
-      player.setPosition(parseInt(data.position[1]), parseInt(data.position[2]));
+    // setup peer when user receives id
+    if ('id' in data) {
+      if (selfPlayer != null) {
+        console.log('destroying old identity', selfPlayer.id, 'and replacing with', data.id);
+        peer.destroy();
+        peer = undefined;
+        return;
+      }
+
+      const name = localStorage.getItem('name')
+      selfPlayer = new SelfPlayer(data.id, name, {x:100, y:100})
+
+      setInterval(_ => {
+        socket.send("ping")
+      }, 10000)
+    } 
+
+    // Populate existing players
+    else if ('players' in data) {
+      for (const p of Object.values(data.players)) {
+        const player = new Player(
+          p.id,
+          p.name,
+          {x: parseInt(p.pos.x), y: parseInt(p.pos.y)}
+        )
+
+        player.audioEnabled = p.audioEnabled
+        player.videoEnabled = p.videoEnabled
+        player.setBroadcast(p.broadcast)
+
+        players[p.id] = player 
+      }
     }
-  }
 
-  // update player broadcast
-  else if ('broadcast' in data) {
-    if (data.broadcast.id in players) {
-      const player = players[data.broadcast.id];
-      player.setBroadcast(data.broadcast.enabled);
+    // talk to any user who joins
+    else if ('join' in data) {
+      console.log('calling', data.join.id);
+      players[data.join.id] = new Player(data.join.id, data.join.name, data.join.pos);
+
+      if (selfPlayer == null || selfPlayer.stream == null) {
+        pendingJoins.push(data.join.id)
+      } else {
+        startCall(data.join.id)
+      }
     }
-  }
 
-  // remove players who left or disconnected
-  else if ('leave' in data) {
-    console.log('call dropped from', data.leave.id);
-    // remove player from players list
-    
-    if (data.leave.id in players) {
-      const player = players[data.leave.id];
-      viewport.removeChild(player)
-      delete players[player.id]
-    };
+    // update player position
+    else if ('position' in data) {
+      if (data.position[0] in players) {
+        const player = players[data.position[0]];
+        player.setPosition(parseInt(data.position[1]), parseInt(data.position[2]));
+      }
+    }
+
+    // update player properties
+    else if ('update' in data) {
+      if (data.update.id in players) {
+        const player = players[data.update.id];
+        player.name = data.update.name;
+        player.audioEnabled = data.update.audioEnabled
+        player.videoEnabled = data.update.videoEnabled
+        player.setBroadcast(data.update.broadcast);
+      }
+    }
+
+    // remove players who left or disconnected
+    else if ('leave' in data) {
+      console.log('call dropped from', data.leave.id);
+      // remove player from players list
+      
+      if (data.leave.id in players) {
+        const player = players[data.leave.id];
+        viewport.removeChild(player)
+        delete players[player.id]
+      };
+    }
+  };
+
+  socket.onopen = event => {
+    socket.send(['connect', localStorage.getItem('name')])
   }
-};
+}
 
 
 document.querySelector('button.mic').onclick = function() {
@@ -513,7 +643,6 @@ document.querySelector('button.settings').onclick = function() {
 document.querySelector('button.broadcast').onclick = function() {
   this.classList.toggle('enabled')
   selfPlayer.setBroadcast(!selfPlayer.broadcast)
-  socket.send([selfPlayer.id, "broadcast", selfPlayer.broadcast])
 };
 
 // Prevent browser zoom, zoom viewport instead
@@ -619,7 +748,6 @@ async function getStream(constraints) {
 audioOutputSelect.onchange = _ => {
   const audioDestination = audioOutputSelect.value;
   Object.values(players).forEach(player => {
-    console.log(player._videoElement)
     attachSinkId(player._videoElement, audioDestination);
   })
 }
