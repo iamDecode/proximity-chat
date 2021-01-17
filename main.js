@@ -3,8 +3,7 @@ const fs = require('fs');
 const https = require('https');
 const express = require('express');
 const { ExpressPeerServer } = require('peer');
-
-const { v4: uuidv4 } = require('uuid');
+const { ProximityChatService } = require('./proximity_chat_service');
 
 const uws = require('uWebSockets.js');
 
@@ -16,130 +15,31 @@ const SSL_CONFIG = {
   key: fs.readFileSync(keyFile),
 };
 
-// setup express, uwebsocket, and peerjs
-const app = express();
-const server = https.createServer(SSL_CONFIG, app);
+const httpServices = express();
+const httpServer = https.createServer(SSL_CONFIG, httpServices);
 
-const peerServer = ExpressPeerServer(server);
+const peerBrokerService = ExpressPeerServer(httpServer)
+  .on('connection', peer => {
+    console.log('peer connected', peer.id);
+  })
+  .on('disconnect', peer => {
+    console.log('peer disconnected', peer.id);
+  });
 
-// use peerjs with express
-app.use('/peerjs', peerServer);
-app.use('/public', express.static('public'));
-
-// send index file
-app.get('/', (req, res) => {
+httpServices.use('/peerjs', peerBrokerService);
+httpServices.use('/public', express.static('public'));
+httpServices.get('/', (req, res) => {
   res.sendFile(__dirname + '/public/index.html');
 });
 
-const throttle = (func, limit) => {
-  let lastFunc
-  let lastRan
-  return function() {
-    const context = this
-    const args = arguments
-    if (!lastRan) {
-      func.apply(context, args)
-      lastRan = Date.now()
+const socketServer = uws.SSLApp({key_file_name: keyFile, cert_file_name: certFile});
+socketServer.ws('/*', new ProximityChatService(socketServer).AsWebSocketBehavior());
+  
+socketServer.listen(9001, (token) => {
+    if (token) {
+      console.log('Listening to port 9001');
     } else {
-      clearTimeout(lastFunc)
-      lastFunc = setTimeout(function() {
-        if ((Date.now() - lastRan) >= limit) {
-          func.apply(context, args)
-          lastRan = Date.now()
-        }
-      }, limit - (Date.now() - lastRan))
+      console.log('Failed to listen to port 9001');
     }
-  }
-}
-
-// track which users are connected
-const users = {};
-
-// handle socket connection
-const usocket = uws.SSLApp({key_file_name: keyFile, cert_file_name: certFile}).ws('/*', {
-  open: (ws) => {
-    const id = uuidv4();
-    const pos = {x: 100, y: 100};
-    
-    console.log('user connected', id);
-
-    // Tell user his or her id
-    ws.send(JSON.stringify({'id': id}));
-
-    // Tell the other users to connect to this user
-    usocket.publish('join', JSON.stringify({join: {id: id, pos: pos}}));
-
-    // Let this client listen to join, leave, and position broadcasts
-    ws.subscribe('join');
-    ws.subscribe('leave');
-    ws.subscribe('position');
-    ws.subscribe('broadcast');
-
-    // ..and players info
-    ws.send(JSON.stringify({
-      'players': Object.entries(users)
-        .filter(u => u[0] !== id)
-        .map(u => ({id: u[1].id, pos: u[1].pos, broadcast: u[1].broadcast}))
-    }));
-
-    const user = { id, ws, pos, broadcast: false };
-    user.emitPos = throttle((x, y) => {
-      usocket.publish('position', String([id, x, y]));
-    }, 25);
-
-    users[id] = user;
-  },
-  message: (ws, message, isBinary) => {
-    const components = Buffer.from(message).toString().split(",");
-
-    if (components[0] == "ping") {
-      ws.send("pong");
-      return
-    }
-
-    const id = components[0]
-    const user = users[id]
-    
-    if (user == null) { 
-      return 
-    }
-
-    // Broadcast
-    if (components[1] == "broadcast") {
-      user.broadcast = components[2] === "true";
-      usocket.publish('broadcast', JSON.stringify({broadcast: {id: id, enabled: user.broadcast}}));
-      return;
-    }
-
-    // Position  
-    user.pos.x = parseInt(components[1]);
-    user.pos.y = parseInt(components[2]);
-    user.emitPos(user.pos.x, user.pos.y); // emit the position, throttled
-  },
-  close: (ws, code, message) => {
-    const user = Object.values(users).find(u => u.ws === ws);
-    console.log('user disconnected', user.id);
-
-    // let other users know to disconnect this client
-    usocket.publish('leave', JSON.stringify({leave: {id: user.id}}));
-
-    // remove the user from the users list
-    delete users[user.id]
-  }
-}).listen(9001, (token) => {
-  if (token) {
-    console.log('Listening to port 9001');
-  } else {
-    console.log('Failed to listen to port 9001');
-  }
-});
-
-peerServer.on('connection', peer => {
-  console.log('peer connected', peer.id);
-});
-
-peerServer.on('disconnect', peer => {
-  console.log('peer disconnected', peer.id);
-});
-
-server.listen(3000);
+  });
+httpServer.listen(3000);
