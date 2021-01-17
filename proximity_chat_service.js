@@ -13,7 +13,6 @@ class ProximityChatService {
   // those explicitly.
   AsWebSocketBehavior() {
     return {
-      open: ProximityChatService.prototype.open.bind(this),
       message: ProximityChatService.prototype.message.bind(this),
       close: ProximityChatService.prototype.close.bind(this),
     }
@@ -38,7 +37,7 @@ class ProximityChatService {
       ws.send(JSON.stringify({'id': id}));
 
       // Tell the other users to connect to this user
-      usocket.publish('join', JSON.stringify({join: {id: id, name: name, pos: pos}}));
+      this.usocket.publish('join', JSON.stringify({join: {id: id, name: name, pos: pos}}));
 
       // Let this client listen to join, leave, and position broadcasts
       ws.subscribe('join');
@@ -48,7 +47,7 @@ class ProximityChatService {
 
       // ..and players info
       ws.send(JSON.stringify({
-        'players': Object.entries(users)
+        'players': Object.entries(this.users)
           .filter(u => u[0] !== id)
           .map(u => ({
             id: u[1].id, 
@@ -61,11 +60,11 @@ class ProximityChatService {
       }));
 
       const user = { ws, id, name, audioEnabled: true, videoEnabled: true, pos, broadcast: false };
-      user.emitPos = throttle((x, y) => {
-        usocket.publish('position', String([id, x, y]));
-      }, 25);
+      user.emitPos = (x, y) => {
+        this.usocket.publish('position', String([id, x, y]));
+      };
 
-      users[id] = user;
+      this.users[id] = user;
       return
     }
 
@@ -82,7 +81,7 @@ class ProximityChatService {
       user.audioEnabled = components[3] === "true";
       user.videoEnabled = components[4] === "true";
       user.broadcast = components[5] === "true";
-      usocket.publish('update', JSON.stringify({
+      this.usocket.publish('update', JSON.stringify({
         update: {
           id: user.id, 
           name: user.name, 
@@ -110,7 +109,7 @@ class ProximityChatService {
       this.usocket.publish('leave', JSON.stringify({leave: {id: user.id}}));
 
       // remove the user from the users list
-      delete users[user.id]
+      delete this.users[user.id]
     }
   }
 }
