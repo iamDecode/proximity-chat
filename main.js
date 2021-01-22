@@ -72,7 +72,7 @@ const users = {};
 const usocket = uws.SSLApp({key_file_name: keyFile, cert_file_name: certFile}).ws('/*', {
   open: (ws) => {
     const id = uuidv4();
-    const pos = {x: 100, y: 100};
+    const pos = {x: 1400, y: 2880 - 200};
     
     console.log('user connected', id);
 
