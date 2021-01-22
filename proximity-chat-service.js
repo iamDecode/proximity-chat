@@ -44,6 +44,7 @@ class ProximityChatService {
       ws.subscribe('leave');
       ws.subscribe('position');
       ws.subscribe('update');
+      ws.subscribe('message');
 
       // ..and players info
       ws.send(JSON.stringify({
@@ -88,6 +89,22 @@ class ProximityChatService {
           audioEnabled: user.audioEnabled, 
           videoEnabled: user.videoEnabled, 
           broadcast: user.broadcast
+        }
+      }));
+      return;
+    }
+
+    // Message
+    if (components[1] == "message") {
+      const buffer = Buffer.from(components[2], 'base64')
+      user.message = {
+        text: buffer.toString('utf-8'),
+        time: Date.now()
+      }
+      this.usocket.publish('message', JSON.stringify({
+        message: {
+          id: user.id, 
+          message: user.message
         }
       }));
       return;

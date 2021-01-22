@@ -102,6 +102,7 @@ nav ul li button.cam::after { content: 'Hide Webcam'; }
 nav ul li button.mic.disabled::after { content: 'Unmute Microphone'; }
 nav ul li button.cam.disabled::after { content: 'Show Webcam'; }
 nav ul li button.settings::after { content: 'Settings'; }
+nav ul li button.chat::after { content: 'Send message'; }
 nav ul li button.broadcast::after { content: 'Broadcast'; }
 nav ul li button.broadcast.enabled::after { content: 'Stop Broadcast'; }
 
@@ -178,14 +179,14 @@ nav ul li button:not(.notooltip):hover::after, nav ul li button:not(.notooltip):
   background: white;
   border-radius: 0.675rem;
   box-shadow: 0 0 25px rgba(40, 47, 60, .2), 0 20px 25px rgba(40, 47, 60, .2), 0 3px 4px rgba(40, 47, 60, .2);
-  transform: translate3d(-75px, 15px, 0) scale(0.98);
+  transform: translate3d(-102px, 15px, 0) scale(0.98);
   transition: transform 150ms cubic-bezier(0.27, 0.01, 0.38, 1.06), opacity 200ms cubic-bezier(0.27, 0.01, 0.38, 1.06);
 }
 
 .preferences.show {
   opacity: 1;
   pointer-events: all;
-  transform: translate3d(-75px, 0, 0) scale(1);
+  transform: translate3d(-102px, 0, 0) scale(1);
 }
 
 .preferences::after {

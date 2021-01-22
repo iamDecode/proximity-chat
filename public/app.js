@@ -150,7 +150,46 @@ class Player extends PIXI.Container {
     this.iconText = iconText;
     this.iconBg = iconBg;
 
+    const messagePadding = {x: 15, y: 10}
+    const message = new PIXI.Container();
+    const messageText = new PIXI.Text('This is a message', {fontFamily: 'Nunito Sans', fontSize: 14, fill: 0xffffff, align: 'left'})
+    const messageBg = new PIXI.Graphics();
+    messageBg.beginFill(0xffffff);
+    messageBg.drawRoundedRect(-messagePadding.x, -messagePadding.y, messageText.width + (2 * messagePadding.x), messageText.height + (2 * messagePadding.y), 10);
+    messageBg.endFill();
+    messageBg.tint = this.color;
+    message.addChild(messageBg);
+    message.addChild(messageText);
+    message.x = radius + messagePadding.x;
+    message.y = -((radius / 1.61803) + messagePadding.y);
+    message.alpha = 0
+    this.addChild(message);
+    this.message = message;
+    this.messageText = messageText;
+    this.messageBg = messageBg;
+
     viewport.addChild(this)
+  }
+
+  showMessage(message, time) {
+    const timePassed = Date.now() - time
+    const ttl = 10000 - timePassed
+
+    if (ttl <= 0) return 
+
+    this.messageText.text = message
+
+    const messagePadding = {x: 15, y: 10}
+    this.messageBg.clear();
+    this.messageBg.beginFill(0xffffff);
+    this.messageBg.drawRoundedRect(-messagePadding.x, -messagePadding.y, this.messageText.width + (2 * messagePadding.x), this.messageText.height + (2 * messagePadding.y), 10);
+    this.messageBg.endFill();
+
+    this.message.alpha = 1
+
+    setTimeout(_ => {
+      this.message.alpha = 0
+    }, ttl)
   }
 
   addVideo(element) {
@@ -385,7 +424,7 @@ class SelfPlayer extends Player {
   }
 
   sync() {
-    socket.send([this.id, "update",  this.name, this.audioEnabled, this.videoEnabled, this.broadcast])
+    socket.send([this.id, "update", this.name, this.audioEnabled, this.videoEnabled, this.broadcast])
   }
 }
 
@@ -602,6 +641,15 @@ function initSocket() {
       }
     }
 
+    else if ('message' in data) {
+      if (data.message.id in players) {
+        const player = players[data.message.id];
+        player.showMessage(data.message.message.text, data.message.message.time);
+      } else {
+        selfPlayer.showMessage(data.message.message.text, data.message.message.time);
+      }
+    }
+
     // remove players who left or disconnected
     else if ('leave' in data) {
       console.log('call dropped from', data.leave.id);
@@ -633,6 +681,16 @@ document.querySelector('button.cam').onclick = function() {
   selfPlayer.setCam(camEnabled)
   this.classList.toggle('disabled')
   this.querySelector('i').innerHTML = camEnabled ? "videocam" : "videocam_off"
+};
+
+
+document.querySelector('button.chat').onclick = function() {
+  this.classList.toggle('notooltip')
+  const message = prompt()
+
+  if (message != null) {
+    socket.send([selfPlayer.id, 'message', btoa(message)])
+  }
 };
 
 document.querySelector('button.settings').onclick = function() {
