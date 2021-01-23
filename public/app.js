@@ -184,7 +184,7 @@ class Player extends PIXI.Container {
       this._videoElement.volume = volume;
 
       const enabled = volume !== 0
-      this._videoElement.muted = enabled;
+      this._videoElement.muted = !enabled;
       this.setMic(enabled)
       this.setCam(enabled)
 
@@ -193,7 +193,7 @@ class Player extends PIXI.Container {
       }
     }
 
-    const scalar = (volume * (1 - 0.5)) + 0.5;;
+    const scalar = (volume * (1 - 0.5)) + 0.5;
     this.scale.set(scalar, scalar)
   }
 
