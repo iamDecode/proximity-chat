@@ -27,143 +27,75 @@ if (localStorage.getItem('name') == null) {
   initSocket()
 }
 
-const app = new PIXI.Application({
-  view: document.querySelector('canvas'),
-  width: window.innerWidth,
-  height: window.innerHeight,
-  antialias: true,
-  clearBeforeRender: false,
-  powerPreference: "high-performance",
-  resolution: window.devicePixelRatio,
-  autoResize: true,
-  resizeTo: window
-})
-
 const stats = new Stats();
 document.body.appendChild(stats.dom);
-app.ticker.add(_ => {
+let request
+
+const performAnimation = () => {
   stats.end()
+  request = requestAnimationFrame(performAnimation)
+  if (selfPlayer != null) selfPlayer.render() 
+  Object.values(players).forEach(p => p.render())
   stats.begin()
+}
+
+requestAnimationFrame(performAnimation)
+
+
+const $bg = document.querySelector('#background')
+const pz = panzoom($bg, {
+  maxZoom: 5,
+  minZoom: Math.max((window.innerWidth / 3200), (window.innerHeight / 1800)),
+  initialX: 100,
+  initialY: 100,
+  bounds: true,
+  boundsPadding: 1,
 })
 
-// create viewport
-const viewport = new Viewport.Viewport({
-    screenWidth: window.innerWidth,
-    screenHeight: window.innerHeight,
-    worldWidth: 3200,
-    worldHeight: 1800,
-    interaction: app.renderer.plugins.interaction
-})
 
-// add the viewport to the stage
-app.stage.addChild(viewport)
-
-// activate plugins
-viewport
-    .drag()
-    .pinch()
-    .wheel()
-    .clamp({direction: 'all'})
-    .clampZoom({maxWidth: 3200, maxHeight: 1800, minHeight: 250})
-    .decelerate({friction: 0.93})
-
-viewport.on('drag-start', _ => {
-  document.querySelector('button.settings').classList.remove('notooltip')
-  document.querySelector('.preferences').classList.remove('show')
-})
-
-// add a red box
-const sprite = viewport.addChild(new PIXI.Sprite.from('public/assets/room.png'))
-
-
-
-
-class Player extends PIXI.Container {
+class Player {
   constructor(id, name, pos) {
-    super();
-
     this.color = colorFor(name)
-    this.setupPixi()
+
+    this.initElement();
 
     this.id = id
     this.name = name
     this.x = pos.x
     this.y = pos.y
+    this.$elem.style.setProperty('--translate-x', `${this.x}px`)
+    this.$elem.style.setProperty('--translate-y', `${this.y}px`)
     this.broadcast = false
     this._audioEnabled = true
     this._videoEnabled = true
   }
 
-  setupPixi() {
-    this.scale.set(0.5);
-    this.size = 125
-    const radius = this.size / 2
+  initElement() {
+    const $elem = document.createElement('div')
+    $elem.classList.add('player')
+    $elem.style.setProperty('--color', `#${this.color.toString(16)}`);
+    $elem.style.setProperty('--color-light', `#${lighten(this.color, 60).toString(16)}`);
 
-    this.audioRing = new PIXI.Graphics();
-    this.addChild(this.audioRing);
+    const $avatar = document.createElement('div')
+    $avatar.classList.add('avatar')
+    $elem.appendChild($avatar)
 
-    this.sprite = new PIXI.Sprite(PIXI.Texture.WHITE);
-    this.sprite.width = this.sprite.height = this.size;
-    this.sprite.anchor.set(0.5);
-    this.addChild(this.sprite);
+    const $icon = document.createElement('div')
+    $icon.classList.add('icon')
+    $elem.appendChild($icon)
 
-    this.border = new PIXI.Graphics();
-    this.border.beginFill(0xffffffff);
-    this.border.drawCircle(0, 0, radius);
-    this.border.endFill();
-    this.border.beginHole();
-    this.border.drawCircle(0, 0, radius*0.96);
-    this.border.endHole();
-    this.addChild(this.border);
+    $bg.appendChild($elem)
 
-    this.avatar = new PIXI.Graphics()
-    this.avatar.beginFill(this.color);
-    this.avatar.drawCircle(0, 0, radius*0.96);
-    this.avatar.endFill()
-    this.avatarText = new PIXI.Text("", {fontFamily : 'Nunito Sans', fontSize: 40, fontWeight: 'bold', fill : 0xffffff  })
-    this.avatarText.anchor.set(0.5)
-    this.avatarText.position.set(0)
-    this.avatar.addChild(this.avatarText)
-    this.addChild(this.avatar)
-
-    const circle = new PIXI.Graphics();
-    circle.beginFill(0xffffff);
-    circle.drawCircle(0, 0, radius);
-    circle.endFill();
-    this.addChild(circle);
-    this.sprite.mask = circle;
-
-    const icon = new PIXI.Container();
-    const iconText = new PIXI.Text('campaign', {fontFamily: 'Material Icons', fontSize: 24, fill: 0xffffff, align: 'center'})
-    const iconBg = new PIXI.Graphics();
-    iconBg.beginFill(0xffffff);
-    iconBg.drawCircle(12, 11, 18);
-    iconBg.endFill();
-    icon.addChild(iconBg);
-    icon.addChild(iconText);
-    icon.x = 32;
-    icon.y = 32;
-    icon.scale.set(0.8);
-    icon.alpha = 0
-    this.addChild(icon);
-    this.icon = icon;
-    this.iconText = iconText;
-    this.iconBg = iconBg;
-
-    viewport.addChild(this)
+    this.$elem = $elem
   }
 
   addVideo(element) {
-    this._videoElement = element
-    this.scale.set(1);
+    this.$video = element
+    this.$elem.appendChild(element)
+    this.$elem.classList.add('audio-enabled')
 
     if(this.stream.getVideoTracks().length > 0) {
-      const texture = PIXI.Texture.from(element);
-      this.sprite.texture = texture;
-
-      if (this.videoEnabled) {
-        setTimeout(_ => this.avatar.alpha = 0, 2000)
-      }
+      this.$elem.classList.add('video-enabled')
     }
   }
 
@@ -179,35 +111,30 @@ class Player extends PIXI.Container {
     this.x = x;
     this.y = y;
 
+    this.$elem.style.setProperty('--translate-x', `${x}px`)
+    this.$elem.style.setProperty('--translate-y', `${y}px`)
+
     let volume = this.calcVolume()
-    if (this._videoElement != null) {
-      this._videoElement.volume = volume;
+    if (this.$video != null) {
+      this.$video.volume = volume;
 
       const enabled = volume !== 0
-      this._videoElement.muted = !enabled;
+      this.$video.muted = !enabled;
       this.setMic(enabled)
       this.setCam(enabled)
 
       if (this.videoEnabled) {
-        this.avatar.alpha = enabled ? 0 : 1
+        this.$elem.classList.toggle('video-enabled', enabled)
       }
     }
 
     const scalar = (volume * (1 - 0.5)) + 0.5;
-    this.scale.set(scalar, scalar)
+    this.$elem.style.setProperty('--scale', scalar)
   }
 
   setBroadcast(enabled) {
     this.broadcast = enabled;
-
-    if (enabled) {
-      this.iconText.text = "campaign"
-      this.iconBg.tint = 0x00b385
-      this.icon.alpha = 1
-    } else if (this.iconText.text == "campaign") {
-      this.icon.alpha = 0
-    }
-
+    this.$elem.classList.toggle('broadcast-enabled', enabled)
     this.setPosition(this.x, this.y)  // To update scale
   }
 
@@ -234,40 +161,31 @@ class Player extends PIXI.Container {
   get name() { return this._name }
   set name(value) {
     this._name = value
-    this.avatarText.text = value[0].toUpperCase()
+    this.$elem.querySelector('.avatar').textContent = value[0].toUpperCase()
   }
 
   get audioEnabled() { return this._audioEnabled }
   set audioEnabled(enabled) {
     this._audioEnabled = enabled
 
-    if (!enabled) {
-      this.iconText.text = "mic_off"
-      this.iconBg.tint = 0xff586d
-      this.icon.alpha = 1
-    } else if (this.iconText.text == "mic_off") {
-      this.icon.alpha = 0
-    }
-    
+    this.$elem.classList.toggle('audio-enabled', enabled)
   }
 
   get videoEnabled() { return this._videoEnabled }
   set videoEnabled(enabled) {
     this._videoEnabled = enabled
-    this.avatar.alpha = enabled ? 0 : 1
+    this.$elem.classList.toggle('video-enabled', enabled)
   }
 
   drawAudioRing(data) {
     const bottomCutoff = 0.4;
     const scale = Math.max(0 ,((Math.max(...data) / 255) - bottomCutoff) / (1 - bottomCutoff));
     const width = (scale * 0.2) + 1;
-    this.audioRing.clear();
-    this.audioRing.beginFill(lighten(this.color, 60), Math.min(1, scale + 0.4))
-    this.audioRing.drawCircle(0, 0, (this.size / 2) * width);
-    this.audioRing.endFill();
+
+    this.$elem.style.setProperty('--volume', width)
   }
 
-  render(renderer) {
+  render() {
     if (this.stream) {
       if(this.analyser == null) {
         const track = this.stream.getAudioTracks()[0];
@@ -282,21 +200,7 @@ class Player extends PIXI.Container {
       this.analyser.getByteFrequencyData(data);
 
       this.drawAudioRing(data);  
-
-
-      let width, height;
-      if (this.sprite.texture.width > this.sprite.texture.height) {
-        width = this.size * (this.sprite.texture.width / this.sprite.texture.height)
-        height = this.size
-      } else {
-        height = this.size * (this.sprite.texture.height / this.sprite.texture.width)
-        width = this.size
-      }
-      this.sprite.width = width
-      this.sprite.height = height
     }
-
-    super.render(renderer)
   }
 }
 
@@ -307,24 +211,82 @@ class SelfPlayer extends Player {
     this.interactive = true
     this.buttonMode = true
 
-    this
-      // events for drag start
-      .on('mousedown', this.onDragStart)
-      .on('touchstart', this.onDragStart)
-      // events for drag end
-      .on('mouseup', this.onDragEnd)
-      .on('mouseupoutside', this.onDragEnd)
-      .on('touchend', this.onDragEnd)
-      .on('touchendoutside', this.onDragEnd)
-      // events for drag move
-      .on('mousemove', this.onDragMove)
-      .on('touchmove', this.onDragMove);
-
-    this.sendPos = (id, x, y) => {
+    this.sendPos = (id, x, y) => { // TODO: reintroduce throttle
       socket.send([id, Math.round(x), Math.round(y)])
     }
 
     this.initStream();
+  }
+
+  initElement() {
+    super.initElement();
+
+    this.$elem.classList.add('self');
+
+    const $elem = this.$elem;
+    let active = false;
+    let offsetX;
+    let offsetY;
+
+    const pickup = e => {
+      if (e.target !== $elem && e.target.parentNode !== $elem) {
+        return
+      }
+
+      if(e.type == 'mousedown' && event.which !== 1) {
+        return
+      }
+
+      e.stopPropagation();
+      active = true;
+
+      const rect = $elem.getBoundingClientRect()
+
+      if (e.type === 'touchstart') {
+        offsetX = e.touches[0].clientX - rect.x;
+        offsetY = e.touches[0].clientY - rect.y;
+      } else {
+        offsetX = e.clientX - rect.x;
+        offsetY = e.clientY - rect.y;
+      }
+    }
+
+    const move = e => {
+      if (active) {
+        e.preventDefault();
+        
+        let x, y;
+        if (e.type === "touchmove") {
+          x = e.touches[0].clientX - offsetX;
+          y = e.touches[0].clientY - offsetY;
+        } else {
+          x = e.clientX - offsetX;
+          y = e.clientY - offsetY;
+        }
+
+        setTranslate(x, y, $elem);
+      }
+    }
+
+    const drop = e => {
+      active = false;
+    }
+
+    const setTranslate = (xPos, yPos, el) => {
+      // Account for global zoom level
+      const transform = pz.getTransform()
+      const x = (xPos - transform.x) / transform.scale
+      const y = (yPos - transform.y) / transform.scale
+      
+      this.setPosition(x, y)
+    }
+
+    $bg.addEventListener('mousedown', pickup)
+    $bg.addEventListener('touchstart', pickup)
+    $bg.addEventListener('mousemove', move)
+    $bg.addEventListener('touchmove', move)
+    $bg.addEventListener('mouseup', drop)
+    $bg.addEventListener('touchend', drop)
   }
 
   async initStream(stream) {
@@ -359,6 +321,9 @@ class SelfPlayer extends Player {
   setPosition(x, y) {
     this.x = x;
     this.y = y;
+    this.$elem.style.setProperty('--translate-x', `${x}px`)
+    this.$elem.style.setProperty('--translate-y', `${y}px`)
+
     this.sendPos(this.id, this.x, this.y);
 
     Object.values(players).forEach(player => {
@@ -609,7 +574,7 @@ function initSocket() {
       
       if (data.leave.id in players) {
         const player = players[data.leave.id];
-        viewport.removeChild(player)
+        player.$elem.remove()
         delete players[player.id]
       };
     }
