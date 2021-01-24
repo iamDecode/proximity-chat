@@ -45,12 +45,12 @@ requestAnimationFrame(performAnimation)
 const $bg = document.querySelector('#background')
 const pz = panzoom($bg, {
   maxZoom: 5,
-  minZoom: Math.max((window.innerWidth / 3200), (window.innerHeight / 1800)),
-  initialX: 100,
-  initialY: 100,
-  bounds: true,
-  boundsPadding: 1,
+  minZoom: Math.max((window.innerWidth / 5120), (window.innerHeight / 2880)),
+  //bounds: true,
+  //boundsPadding: 1,
 })
+
+pz.moveTo(-1460 + (window.innerWidth/2), -2880 + window.innerHeight);
 
 
 class Player {
@@ -512,7 +512,7 @@ function initSocket() {
       }
 
       const name = localStorage.getItem('name')
-      selfPlayer = new SelfPlayer(data.id, name, {x:100, y:100})
+      selfPlayer = new SelfPlayer(data.id, name, {x:1400, y:2880 - 200})
 
       setInterval(_ => {
         socket.send("ping")

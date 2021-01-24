@@ -13,9 +13,10 @@ html, body {
 }
 
 #viewport #background {
-  width: 3200px;
-  height: 1800px;
-  background: url('/public/assets/room.png');
+  width: 5120px;
+  height: 2880px;
+  background: url('/public/assets/keizer.jpg');
+  background-size: 100% 100%;
 }
 
 .player {

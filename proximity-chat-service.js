@@ -28,7 +28,7 @@ class ProximityChatService {
 
     if (components[0] == "connect") {
       const id = uuidv4();
-      const pos = {x: 100, y: 100};
+      const pos = {x: 1400, y: 2880 - 200};
       const name = components[1];
 
       console.log('user connected', id);
