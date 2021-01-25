@@ -12,7 +12,7 @@
   "license": "CC0 1.0 Universal",
   "dependencies": {
     "express": "^4.17.1",
-    "peer": "^0.5.3",
+    "mediasoup": "^3.6.31",
     "uWebSockets.js": "uNetworking/uWebSockets.js#v18.11.0",
     "uuid": "^8.3.0"
   },
