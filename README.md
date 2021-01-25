@@ -17,3 +17,7 @@ For production, ensure to set the `certFile` and `keyFile` parameters in `main.j
 
 ## Running
 Install dependencies with `yarn install` and run with `yarn start`. Open `https://127.0.0.1:3000`, `https://yourexternalip:3000`, or `https://yourlanip:3000` in a supporting browser on multiple devices. 
+
+## Commit lint
+
+Please commit-lint all commit messages. This should be automatically enforced by Husky.
