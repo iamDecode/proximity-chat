@@ -18,7 +18,7 @@ class ProximityChatService {
     }
   }
 
-  message(ws, message, isBinary) {
+  async message(ws, message, isBinary) {
     const components = Buffer.from(message).toString().split(",");
 
     if (components[0] == "ping") {
@@ -99,7 +99,7 @@ class ProximityChatService {
     user.emitPos(user.pos.x, user.pos.y);
   }
 
-  close(ws, code, message) {
+  async close(ws, code, message) {
     const user = Object.values(this.users).find(u => u.ws === ws);
     
     if (user != null) {

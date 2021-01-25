@@ -1,4 +1,25 @@
 let socket;
+
+
+function socketSend(command, arg, ack) {
+  return new Promise((res, rej) => {
+    const check = function(message) {
+      const components = message.data.split(',')
+      if (components[0] === ack) {
+        socket.removeEventListener('message', check)
+        res(message.data.substr(ack.length + 1))
+      }
+    }
+    socket.addEventListener('message', check);
+    if (arg != null) {
+      socket.send([command, arg]);
+    } else {
+      socket.send(command);
+    }
+  })
+}
+
+
 if (localStorage.getItem('name') == null) {
   const $modal = document.querySelector('#usernameModal')
   const $button = $modal.querySelector('button')
@@ -269,19 +290,19 @@ class Player extends PIXI.Container {
 
   render(renderer) {
     if (this.stream) {
-      if(this.analyser == null) {
-        const track = this.stream.getAudioTracks()[0];
-        const AudioContext = window.AudioContext || window.webkitAudioContext;
-        const context = new AudioContext();
-        const source = context.createMediaStreamSource(new MediaStream([track]));
-        this.analyser = context.createAnalyser();
-        source.connect(this.analyser);
-      }
+      // if(this.analyser == null) {
+      //   const track = this.stream.getAudioTracks()[0];
+      //   const AudioContext = window.AudioContext || window.webkitAudioContext;
+      //   const context = new AudioContext();
+      //   const source = context.createMediaStreamSource(new MediaStream([track]));
+      //   this.analyser = context.createAnalyser();
+      //   source.connect(this.analyser);
+      // }
 
-      const data = new Uint8Array(this.analyser.frequencyBinCount);
-      this.analyser.getByteFrequencyData(data);
+      // const data = new Uint8Array(this.analyser.frequencyBinCount);
+      // this.analyser.getByteFrequencyData(data);
 
-      this.drawAudioRing(data);  
+      // this.drawAudioRing(data);  
 
 
       let width, height;
@@ -328,15 +349,43 @@ class SelfPlayer extends Player {
   }
 
   async initStream(stream) {
-    if (stream == null) stream = await getStream({audio: true, video: true});
-    stream.noiseSuppression = true;
+    // if (stream == null) stream = await getStream({audio: true, video: true});
+    // stream.noiseSuppression = true;
 
-    navigator.mediaDevices.enumerateDevices().then(gotDevices).catch(handleError);
+    // navigator.mediaDevices.enumerateDevices().then(gotDevices).catch(handleError);
 
-    this.stream = stream;
-    playStream(stream, this);
+    // this.stream = stream;
+    // playStream(stream, this);
 
-    if(peer == null) initPeer();
+    // if(peer == null) initPeer();
+    const rtpCapabilities = await socketSend('getRouterRtpCapabilities', null, 'getRouterRtpCapabilitiesAck')
+
+    await loadDevice(JSON.parse(rtpCapabilities))
+
+    const transport = await initProducerTransport()
+
+    try {
+      let stream = await getUserMedia(transport, true);
+      const track = stream.getVideoTracks()[0];
+      const params = { track };
+      
+      // Simulcast
+      params.encodings = [
+        { maxBitrate: 100000 },
+        { maxBitrate: 300000 },
+        { maxBitrate: 900000 },
+      ];
+      params.codecOptions = {
+        videoGoogleStartBitrate : 1000
+      };
+      
+      selfPlayer.stream = stream;
+      selfPlayer.producer = await transport.produce(params);
+    } catch (err) {
+      console.error(err)
+    }
+
+    await initConsumerTransport()
   }
 
   setMic(enabled) {
@@ -524,8 +573,167 @@ function receiveCall(call) {
   });
 }
 
+let device;
 
-function initSocket() {
+async function loadDevice(routerRtpCapabilities) {
+  try {
+    device = new mediasoupClient.Device();
+  } catch (error) {
+    if (error.name === 'UnsupportedError') {
+      console.error('browser not supported');
+      alert("Your browser is not supported!")
+    }
+  }
+  await device.load({ routerRtpCapabilities });
+}
+
+
+async function initProducerTransport() {
+  const data = await socketSend('createProducerTransport', JSON.stringify({
+    forceTcp: false,
+    rtpCapabilities: device.rtpCapabilities,
+  }), "createProducerTransportAck")
+
+  const transport = device.createSendTransport(JSON.parse(data));
+
+  transport.on('connect', async ({ dtlsParameters }, callback, errback) => {
+    try {
+      await socketSend('connectProducerTransport', JSON.stringify(dtlsParameters), 'connectProducerTransportAck')
+      callback()
+    } catch(e) {
+      errback(e)
+    }
+  });
+
+  transport.on('produce', async ({ kind, rtpParameters }, callback, errback) => {
+    try {
+      const id = await socketSend('produce', JSON.stringify({
+        transportId: transport.id,
+        kind,
+        rtpParameters,
+      }), 'produceAck')
+      callback({ id })
+    } catch(e) {
+      errback(e)
+    }
+  });
+
+  transport.on('connectionstatechange', (state) => {
+    switch (state) {
+      case 'connecting':
+        console.log('producer: publishing...');
+        break;
+
+      case 'connected':
+        console.log('producer: connected!');
+        playStream(selfPlayer.stream, selfPlayer)
+      break;
+
+      case 'failed':
+        transport.close();
+        console.log('producer: connection failed.')
+      break;
+
+      default: break;
+    }
+  });
+
+  return transport;
+}
+
+async function initConsumerTransport() {
+  const data = await socketSend('createConsumerTransport', JSON.stringify({
+    forceTcp: false,
+  }), "createConsumerTransportAck")
+
+  const transport = device.createRecvTransport(JSON.parse(data));
+
+  transport.on('connect', async ({ dtlsParameters }, callback, errback) => {
+    try {
+      await socketSend('connectConsumerTransport', JSON.stringify({
+        transportId: transport.id,
+        dtlsParameters
+      }), 'connectConsumerTransportAck')
+      callback()
+    } catch(e) {
+      errback(e)
+    }
+  });
+
+  transport.on('connectionstatechange', async (state) => {
+    switch (state) {
+      case 'connecting':
+        console.log('consumer: subscribing...');
+        break;
+
+      case 'connected':
+        //document.querySelector('#remote_video').srcObject = await stream;
+        // TODO: add to player
+        const video = document.createElement('video')
+        video.srcObject = await stream;
+        document.body.appendChild(video);
+
+        await socketSend('resume', null, 'resumeAck')
+        console.log('consumer: subscribed!');
+        break;
+
+      case 'failed':
+        transport.close();
+        console.log('consumer: connection failed.');
+        break;
+
+      default: break;
+    }
+  });
+
+  const stream = await consume(transport);
+
+  return transport;
+}
+
+async function consume(transport) {
+  const { rtpCapabilities } = device;
+  const data = await socketSend('consume', JSON.stringify({ rtpCapabilities }), 'consumeAck');
+  const {
+    producerId,
+    id,
+    kind,
+    rtpParameters,
+  } = JSON.parse(data);
+
+  let codecOptions = {};
+  const consumer = await transport.consume({
+    id,
+    producerId,
+    kind,
+    rtpParameters,
+    codecOptions,
+  });
+  const stream = new MediaStream();
+  stream.addTrack(consumer.track);
+  return stream;
+}
+
+async function getUserMedia(transport, isWebcam) {
+  if (!device.canProduce('video')) {
+    console.error('cannot produce video');
+    alert('No video currently not supported!')
+    return;
+  }
+
+  let stream;
+  try {
+    stream = isWebcam ?
+      await navigator.mediaDevices.getUserMedia({ video: true }) :
+      await navigator.mediaDevices.getDisplayMedia({ video: true });
+  } catch (err) {
+    console.error('getUserMedia() failed:', err.message);
+    throw err;
+  }
+  return stream;
+}
+
+async function initSocket() {
   socket = new WebSocket(`wss://${location.hostname}:9001`);
   socket.onmessage = async (message) => {
     let data;

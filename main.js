@@ -1,7 +1,9 @@
 const fs = require('fs');
 const express = require('express');
-const { ExpressPeerServer } = require('peer');
+const mediasoup = require('mediasoup');
 const { ProximityChatService } = require('./proximity-chat-service');
+const { MediasoupService } = require('./mediasoup-service');
+
 const uws = require('uWebSockets.js');
 
 const httpServices = express();
@@ -37,21 +39,19 @@ if ((process.env.SSL_CERT_PATH == undefined)
 }
 
 // Create and register services.
-const peerBrokerService = ExpressPeerServer(httpServer)
-  .on('connection', peer => {
-    console.log('peer connected', peer.id);
-  })
-  .on('disconnect', peer => {
-    console.log('peer disconnected', peer.id);
-  });
+const pcService = new ProximityChatService(socketServer)
+const msService = new MediasoupService(socketServer)
 
-httpServices.use('/peerjs', peerBrokerService);
-httpServices.use('/public', express.static('public'));
-httpServices.get('/', (req, res) => {
-  res.sendFile(__dirname + '/public/index.html');
+socketServer.ws('/*', {
+  message: async (...args) =>  {
+    await pcService.message(...args)
+    await msService.message(...args)
+  }, 
+  close: async (...args) => {
+    await pcService.close(...args)
+    await msService.close(...args)
+  }
 });
-
-socketServer.ws('/*', new ProximityChatService(socketServer).asWebSocketBehavior());
   
 // Start servers.
 socketServer.listen(9001, (token) => {
