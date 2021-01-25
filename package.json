@@ -4,7 +4,9 @@
   "description": "A demo of a proximity voice chatroom using peerjs",
   "main": "main.js",
   "scripts": {
-    "start": "node main.js"
+    "start": "node main.js",
+    "lint": "eslint .",
+    "lint-fix": "eslint . --fix"
   },
   "author": "Meshiest",
   "license": "CC0 1.0 Universal",
@@ -17,6 +19,8 @@
   "devDependencies": {
     "@commitlint/cli": "^11.0.0",
     "@commitlint/config-conventional": "^11.0.0",
+    "eslint": "^7.18.0",
+    "eslint-config-google": "^0.14.0"
     "husky": "^4.3.8"
   },
   "husky": {
