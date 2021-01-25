@@ -8,17 +8,8 @@ class ProximityChatService {
     // To broadcast, especially in close().
     this.usocket = usocket;
   }
-  
-  // WebSockets calls handlers in a funny way that doesn't set `this`, so bind
-  // those explicitly.
-  asWebSocketBehavior() {
-    return {
-      message: (...args) => this.message(...args),
-      close: (...args) => this.close(...args),
-    }
-  }
 
-  message(ws, message, isBinary) {
+  async message(ws, message, isBinary) {
     const components = Buffer.from(message).toString().split(",");
 
     if (components[0] == "ping") {
@@ -99,7 +90,7 @@ class ProximityChatService {
     user.emitPos(user.pos.x, user.pos.y);
   }
 
-  close(ws, code, message) {
+  async close(ws, code, message) {
     const user = Object.values(this.users).find(u => u.ws === ws);
     
     if (user != null) {
