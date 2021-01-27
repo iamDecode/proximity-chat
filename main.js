@@ -1,4 +1,5 @@
 const fs = require('fs');
+const { v4: uuidv4 } = require('uuid');
 const express = require('express');
 const mediasoup = require('mediasoup');
 const { ProximityChatService } = require('./proximity-chat-service');
@@ -48,6 +49,9 @@ const pcService = new ProximityChatService(socketServer)
 const msService = new MediasoupService(socketServer)
 
 socketServer.ws('/*', {
+  open: async ws => {
+    ws.id = uuidv4();
+  },
   message: async (...args) =>  {
     await pcService.message(...args)
     await msService.message(...args)
