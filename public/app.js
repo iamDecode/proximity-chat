@@ -335,7 +335,7 @@ class SelfPlayer extends Player {
     const transport = await initProducerTransport()
 
     try {
-      let stream = await getUserMedia(transport, true);
+      let stream = await getStream({video: true}, true);
       const track = stream.getVideoTracks()[0];
       const params = { track };
       
@@ -649,20 +649,19 @@ async function consume(transport, userId) {
   return stream;
 }
 
-async function getUserMedia(transport, isWebcam) {
+async function getStream(constraints, isWebcam) {
   if (!device.canProduce('video')) {
-    console.error('cannot produce video');
-    alert('No video currently not supported!')
-    return;
+    console.log('cannot produce video');
+    delete constraints.video;
   }
 
   let stream;
   try {
     stream = isWebcam ?
-      await navigator.mediaDevices.getUserMedia({ video: true }) :
-      await navigator.mediaDevices.getDisplayMedia({ video: true });
+      await navigator.mediaDevices.getUserMedia(constraints) :
+      await navigator.mediaDevices.getDisplayMedia(constraints);
   } catch (err) {
-    console.error('getUserMedia() failed:', err.message);
+    console.error('getStream() failed:', err.message);
     throw err;
   }
   return stream;
@@ -723,7 +722,7 @@ async function initSocket() {
     // talk to any user who joins
     else if ('join' in data) {
       if (data.join.id == selfPlayer.id) return;
-      
+
       console.log('calling', data.join.id);
       players[data.join.id] = new Player(data.join.id, data.join.name, data.join.pos);
 
@@ -887,15 +886,6 @@ function handleError(error) {
   throw error;
 }
 
-async function getStream(constraints) {
-  return await navigator.mediaDevices.getUserMedia(constraints).catch(err => {
-    if('video' in constraints && ['NotAllowedError', 'OverconstrainedError', 'NotFoundError'].includes(err.name)) {
-      delete constraints.video;
-      return navigator.mediaDevices.getUserMedia(constraints)
-    }
-  })
-}
-
 audioOutputSelect.onchange = _ => {
   const audioDestination = audioOutputSelect.value;
   Object.values(players).forEach(player => {
@@ -913,7 +903,7 @@ audioInputSelect.onchange = videoSelect.onchange = e => {
     audio: {deviceId: audioSource ? {exact: audioSource} : undefined},
     video: {deviceId: videoSource ? {exact: videoSource} : undefined}
   };
-  getStream(constraints).then(stream => {
+  getStream(constraints, true).then(stream => {
     const audioTrack = stream.getAudioTracks()[0];
     const videoTrack = stream.getVideoTracks()[0];
 
