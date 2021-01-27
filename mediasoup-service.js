@@ -59,6 +59,9 @@ const config = {
 class MediasoupService {
   constructor(usocket) {
     this.runMediasoupWorker()
+
+    // Maps userid to producer
+    this.producers = new Map()
   }
 
   async message(ws, message, isBinary) {
@@ -97,16 +100,17 @@ class MediasoupService {
     }
 
     if (components[0] == "produce") {
-      const {kind, rtpParameters} = JSON.parse(data.substr(8));
-      this.producer = await this.producerTransport.produce({ kind, rtpParameters });
-      ws.send(String(["produceAck", this.producer.id]))
+      const {kind, userId, rtpParameters} = JSON.parse(data.substr(8));
+      const producer = await this.producerTransport.produce({ kind, rtpParameters });
+      this.producers.set(userId, {producer, ws});
+      ws.send(String(["produceAck", producer.id]))
       return
     }
 
     if (components[0] == "consume") {
-      const { rtpCapabilities } = JSON.parse(data.substr(8));
-      const consumer = await this.createConsumer(this.producer, rtpCapabilities);
-
+      const { rtpCapabilities, userId } = JSON.parse(data.substr(8));
+      const producer = this.producers.get(userId).producer;
+      const consumer = await this.createConsumer(producer, rtpCapabilities);
       ws.send(String(["consumeAck", JSON.stringify(consumer)]));      
       return
     }
@@ -119,6 +123,14 @@ class MediasoupService {
   }
 
   async close(ws, code, message) {
+    const entry = [...this.producers.values()].find(u => u.ws === ws);
+    
+    if (entry != null) {
+      entry.producer.close()
+
+      // remove the producer from the producers list
+      this.producers.delete(entry.producer.id)
+    }
   }
 
   async runMediasoupWorker() {
@@ -179,8 +191,9 @@ class MediasoupService {
       console.error('can not consume');
       return;
     }
+    let consumer;
     try {
-      this.consumer = await this.consumerTransport.consume({
+      consumer = await this.consumerTransport.consume({
         producerId: producer.id,
         rtpCapabilities,
         paused: producer.kind === 'video',
@@ -190,17 +203,20 @@ class MediasoupService {
       return;
     }
 
-    if (this.consumer.type === 'simulcast') {
-      await this.consumer.setPreferredLayers({ spatialLayer: 2, temporalLayer: 2 });
+    if (consumer.type === 'simulcast') {
+      await consumer.setPreferredLayers({ spatialLayer: 2, temporalLayer: 2 });
     }
+
+    this.consumer = consumer
+    consumer.resume();
 
     return {
       producerId: producer.id,
-      id: this.consumer.id,
-      kind: this.consumer.kind,
-      rtpParameters: this.consumer.rtpParameters,
-      type: this.consumer.type,
-      producerPaused: this.consumer.producerPaused
+      id: consumer.id,
+      kind: consumer.kind,
+      rtpParameters: consumer.rtpParameters,
+      type: consumer.type,
+      producerPaused: consumer.producerPaused
     };
   }
 }
