@@ -1,5 +1,3 @@
-const { v4: uuidv4 } = require('uuid');
-
 class ProximityChatService {
 
   constructor(usocket) {
@@ -19,8 +17,7 @@ class ProximityChatService {
   }
 
   async message(ws, message, isBinary) {
-    const data = Buffer.from(message).toString()
-    const components = data.split(",");
+    const components = Buffer.from(message).toString().split(",");
 
     if (components[0] == "ping") {
       ws.send("pong");
@@ -28,7 +25,7 @@ class ProximityChatService {
     }
 
     if (components[0] == "connect") {
-      const id = uuidv4();
+      const id = ws.id;
       const pos = {x: 100, y: 100};
       const name = components[1];
 
@@ -36,6 +33,9 @@ class ProximityChatService {
 
       // Tell user his or her id
       ws.send(JSON.stringify({'id': id}));
+
+      // Tell the other users to connect to this user
+      this.usocket.publish('join', JSON.stringify({join: {id: id, name: name, pos: pos}}));
 
       // Let this client listen to join, leave, and position broadcasts
       ws.subscribe('join');
@@ -66,16 +66,7 @@ class ProximityChatService {
       return
     }
 
-    // Produce
-    if (components[0] == "produce") {
-      const { userId } = JSON.parse(data.substr(8));
-      const user = this.users[userId]
-      // Tell the other users to connect to this user
-      this.usocket.publish('join', JSON.stringify({join: {id: userId, name: user.name, pos: user.pos}}));
-      return
-    }
-
-    const id = components[0]
+    const id = components[0] // FIXME: we can use ws.id now, this can be removed
     const user = this.users[id]
     
     if (user == null) { 

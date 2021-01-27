@@ -61,7 +61,12 @@ class MediasoupService {
     this.runMediasoupWorker()
 
     // Maps userid to producer
-    this.producers = new Map()
+    this.producers = {
+      audio: new Map(),
+      video: new Map()
+    }
+    this.producerTransports = new Map();
+    this.consumerTransports = new Map();
   }
 
   asWebSocketBehavior() {
@@ -82,43 +87,51 @@ class MediasoupService {
 
     if (components[0] == 'createProducerTransport') {
       const { transport, params } = await this.createWebRtcTransport();
-      this.producerTransport = transport;
+      this.producerTransports.set(ws.id, transport);
       ws.send(String(["createProducerTransportAck", JSON.stringify(params)]))
       return
     }
 
     if (components[0] == 'createConsumerTransport') {
       const { transport, params } = await this.createWebRtcTransport();
-      this.consumerTransport = transport;
+      this.consumerTransports.set(ws.id, transport);
       ws.send(String(["createConsumerTransportAck", JSON.stringify(params)]))
       return
     }
 
     if (components[0] == "connectProducerTransport") {
-      await this.producerTransport.connect({ dtlsParameters: JSON.parse(data.substr(25)) });
+      await this.producerTransports.get(ws.id).connect({ dtlsParameters: JSON.parse(data.substr(25)) });
       ws.send("connectProducerTransportAck")
       return
     }
 
     if (components[0] == "connectConsumerTransport") {
-      await this.consumerTransport.connect({ dtlsParameters: JSON.parse(data.substr(25)).dtlsParameters });
+      await this.consumerTransports.get(ws.id).connect({ dtlsParameters: JSON.parse(data.substr(25)).dtlsParameters });
       ws.send("connectConsumerTransportAck")
       return
     }
 
     if (components[0] == "produce") {
-      const {kind, userId, rtpParameters} = JSON.parse(data.substr(8));
-      const producer = await this.producerTransport.produce({ kind, rtpParameters });
-      this.producers.set(userId, {producer, ws});
+      const {kind, rtpParameters} = JSON.parse(data.substr(8));
+      console.log(ws.id, 'produces', kind)
+      const producer = await this.producerTransports.get(ws.id).produce({ kind, rtpParameters });
+      this.producers[kind].set(ws.id, producer);
       ws.send(String(["produceAck", producer.id]))
       return
     }
 
     if (components[0] == "consume") {
-      const { rtpCapabilities, userId } = JSON.parse(data.substr(8));
-      const producer = this.producers.get(userId).producer;
-      const consumer = await this.createConsumer(producer, rtpCapabilities);
-      ws.send(String(["consumeAck", JSON.stringify(consumer)]));      
+      const { rtpCapabilities, producerKind, userId } = JSON.parse(data.substr(8));
+      const producer = this.producers[producerKind].get(userId);
+      console.log('consumes', producerKind, ' from ', userId)
+
+      if (producer != null) {
+        const consumer = await this.createConsumer(producer, ws.id, rtpCapabilities);
+        ws.send(String(["consumeAck", JSON.stringify(consumer)]));
+      } else {
+        ws.send(String(["consumeAck", null]));
+      }
+      
       return
     }
 
@@ -130,14 +143,21 @@ class MediasoupService {
   }
 
   async close(ws, code, message) {
-    const entry = [...this.producers.values()].find(u => u.ws === ws);
+    const audioProducer = this.producers.audio.get(ws.id)
+    const videoProducer = this.producers.video.get(ws.id)
     
-    if (entry != null) {
-      entry.producer.close()
-
-      // remove the producer from the producers list
-      this.producers.delete(entry.producer.id)
+    if (audioProducer != null) {
+      audioProducer.close()
+      this.producers.audio.delete(ws.id)
     }
+
+    if (videoProducer != null) {
+      videoProducer.close()
+      this.producers.video.delete(ws.id)
+    }
+
+    this.producerTransports.delete(ws.id)
+    this.consumerTransports.delete(ws.id)
   }
 
   async runMediasoupWorker() {
@@ -188,7 +208,7 @@ class MediasoupService {
     };
   }
 
-  async createConsumer(producer, rtpCapabilities) {
+  async createConsumer(producer, id, rtpCapabilities) {
     if (!this.router.canConsume(
       {
         producerId: producer.id,
@@ -200,7 +220,7 @@ class MediasoupService {
     }
     let consumer;
     try {
-      consumer = await this.consumerTransport.consume({
+      consumer = await this.consumerTransports.get(id).consume({
         producerId: producer.id,
         rtpCapabilities,
         paused: producer.kind === 'video',
