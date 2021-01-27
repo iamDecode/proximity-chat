@@ -345,19 +345,10 @@ class SelfPlayer extends Player {
       socket.send([id, Math.round(x), Math.round(y)])
     }
 
-    this.initStream();
+    this.initMediasoup();
   }
 
-  async initStream(stream) {
-    // if (stream == null) stream = await getStream({audio: true, video: true});
-    // stream.noiseSuppression = true;
-
-    // navigator.mediaDevices.enumerateDevices().then(gotDevices).catch(handleError);
-
-    // this.stream = stream;
-    // playStream(stream, this);
-
-    // if(peer == null) initPeer();
+  async initMediasoup() {
     const rtpCapabilities = await socketSend('getRouterRtpCapabilities', null, 'getRouterRtpCapabilitiesAck')
 
     await loadDevice(JSON.parse(rtpCapabilities))
@@ -520,60 +511,24 @@ function iOS() {
 let peer;
 let pendingJoins = [];
 
-// create peer, setup handlers
-function initPeer() {
-  peer = new Peer(selfPlayer.id, {host: location.hostname, port: location.port, path: '/peerjs'});
-
-  peer.on('open', id => { console.log('My peer ID is:', id); });
-  peer.on('disconnected', id => { console.log('lost connection'); });
-  peer.on('error', err => { console.error(err); });
-
-  // run when someone calls us. answer the call
-  peer.on('call', async call => {
-    console.log('call from', call.peer);
-    call.answer(selfPlayer.stream);
-    receiveCall(call);
-  });
-
-  pendingJoins.forEach(id => startCall(id))
-  pendingJoins = []
-}
-
 // start a call with target
 async function startCall(target) {
-  if (!peer) return;
+  console.log('starting call with ', target)
+  const player = players[target];
 
-  let options = { 
-    sdpTransform: x => {
-      // FIX: ensure rotation is correct on mobile devices
-      return x.split("\n").filter(y => !y.includes("urn:3gpp:video-orientation")).join("\n")
-    }
-  };
-
-  if (selfPlayer.stream.getVideoTracks().length === 0) {
-    options.constraints = { offerToReceiveVideo: true };
+  if (!player) {
+    console.log('couldn\'t find player for stream', call.peer);
+  } else if (player.stream == null) {
+    const stream = await consume(consumerTransport, target);
+    //stream.noiseSuppression = true;
+    player.stream = stream;
+    playStream(stream, target);
+    console.log('created stream for', target);
   }
-
-  const call = peer.call(target, selfPlayer.stream, options);
-  receiveCall(call);
-}
-
-// play the stream from the call in a video element
-function receiveCall(call) {
-  call.on('stream', stream => {
-    stream.noiseSuppression = true;
-    const player = players[call.peer];
-    if (!player) {
-      console.log('couldn\'t find player for stream', call.peer);
-    } else if (player.stream == null) {
-      player.stream = stream;
-      playStream(stream, call.peer);
-      console.log('created stream for', call.peer);
-    }
-  });
 }
 
 let device;
+let consumerTransport;
 
 async function loadDevice(routerRtpCapabilities) {
   try {
@@ -609,6 +564,7 @@ async function initProducerTransport() {
     try {
       const id = await socketSend('produce', JSON.stringify({
         transportId: transport.id,
+        userId: selfPlayer.id,
         kind,
         rtpParameters,
       }), 'produceAck')
@@ -667,13 +623,6 @@ async function initConsumerTransport() {
         break;
 
       case 'connected':
-        //document.querySelector('#remote_video').srcObject = await stream;
-        // TODO: add to player
-        const video = document.createElement('video')
-        video.srcObject = await stream;
-        document.body.appendChild(video);
-
-        await socketSend('resume', null, 'resumeAck')
         console.log('consumer: subscribed!');
         break;
 
@@ -686,14 +635,16 @@ async function initConsumerTransport() {
     }
   });
 
-  const stream = await consume(transport);
+  consumerTransport = transport;
 
-  return transport;
+  console.log(`pending joins: there were ${pendingJoins.length} pending`)
+  pendingJoins.forEach(id => startCall(id))
+  pendingJoins = []
 }
 
-async function consume(transport) {
+async function consume(transport, userId) {
   const { rtpCapabilities } = device;
-  const data = await socketSend('consume', JSON.stringify({ rtpCapabilities }), 'consumeAck');
+  const data = await socketSend('consume', JSON.stringify({ userId, rtpCapabilities }), 'consumeAck');
   const {
     producerId,
     id,
@@ -711,6 +662,8 @@ async function consume(transport) {
   });
   const stream = new MediaStream();
   stream.addTrack(consumer.track);
+
+  //await socketSend('resume', null, 'resumeAck')
   return stream;
 }
 
@@ -776,15 +729,23 @@ async function initSocket() {
         player.setBroadcast(p.broadcast)
 
         players[p.id] = player 
+
+        if (consumerTransport == null) {
+          pendingJoins.push(p.id)
+        } else {
+          startCall(p.id)
+        }
       }
     }
 
     // talk to any user who joins
     else if ('join' in data) {
+      if (data.join.id == selfPlayer.id) return;
+      
       console.log('calling', data.join.id);
       players[data.join.id] = new Player(data.join.id, data.join.name, data.join.pos);
 
-      if (selfPlayer == null || selfPlayer.stream == null) {
+      if (consumerTransport == null) {
         pendingJoins.push(data.join.id)
       } else {
         startCall(data.join.id)

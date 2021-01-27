@@ -19,7 +19,8 @@ class ProximityChatService {
   }
 
   async message(ws, message, isBinary) {
-    const components = Buffer.from(message).toString().split(",");
+    const data = Buffer.from(message).toString()
+    const components = data.split(",");
 
     if (components[0] == "ping") {
       ws.send("pong");
@@ -35,9 +36,6 @@ class ProximityChatService {
 
       // Tell user his or her id
       ws.send(JSON.stringify({'id': id}));
-
-      // Tell the other users to connect to this user
-      this.usocket.publish('join', JSON.stringify({join: {id: id, name: name, pos: pos}}));
 
       // Let this client listen to join, leave, and position broadcasts
       ws.subscribe('join');
@@ -65,6 +63,15 @@ class ProximityChatService {
       };
 
       this.users[id] = user;
+      return
+    }
+
+    // Produce
+    if (components[0] == "produce") {
+      const { userId } = JSON.parse(data.substr(8));
+      const user = this.users[userId]
+      // Tell the other users to connect to this user
+      this.usocket.publish('join', JSON.stringify({join: {id: userId, name: user.name, pos: user.pos}}));
       return
     }
 

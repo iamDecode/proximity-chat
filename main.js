@@ -38,6 +38,11 @@ if ((process.env.SSL_CERT_PATH == undefined)
   console.log('Loading server without encryption.');
 }
 
+httpServices.use('/public', express.static('public'));
+httpServices.get('/', (req, res) => {
+  res.sendFile(__dirname + '/public/index.html');
+})
+
 // Create and register services.
 const pcService = new ProximityChatService(socketServer)
 const msService = new MediasoupService(socketServer)
