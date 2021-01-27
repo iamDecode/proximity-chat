@@ -357,6 +357,8 @@ class SelfPlayer extends Player {
 
     try {
       let stream = await getStream({video: true}, true);
+      navigator.mediaDevices.enumerateDevices().then(gotDevices)
+
       const track = stream.getVideoTracks()[0];
       const params = { track };
       
