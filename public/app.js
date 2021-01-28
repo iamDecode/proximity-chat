@@ -444,6 +444,10 @@ function playStream(stream, target) {
   elem.autoplay = true;
   elem.playsInline = true;
 
+  if (sinkId != null) {
+    attachSinkId(elem, sinkId);
+  }
+
   // add it to the player
   if (target instanceof SelfPlayer) {
     elem.setAttribute('data-peer', target.id);
@@ -925,10 +929,12 @@ function handleError(error) {
   throw error;
 }
 
+sinkId = null
 audioOutputSelect.onchange = _ => {
   const audioDestination = audioOutputSelect.value;
+  sinkId = audioDestination;
   Object.values(players).forEach(player => {
-    attachSinkId(player._videoElement, audioDestination);
+    attachSinkId(player.$elem.querySelector('video'), audioDestination);
   })
 }
 
