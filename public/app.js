@@ -48,8 +48,19 @@ const pz = panzoom($bg, {
   minZoom: Math.max((window.innerWidth / 3200), (window.innerHeight / 1800)),
   initialX: 100,
   initialY: 100,
+  zoomSpeed: 0.25,
   bounds: true,
   boundsPadding: 1,
+})
+
+pz.on('panstart', _ => {
+  const scale = pz.getTransform().scale
+  pz.setMinZoom(scale)
+  pz.setMaxZoom(scale)
+})
+pz.on('panend', _ => {
+  pz.setMinZoom(Math.max((window.innerWidth / 3200), (window.innerHeight / 1800)))
+  pz.setMaxZoom(5)
 })
 
 
@@ -237,6 +248,8 @@ class SelfPlayer extends Player {
         return
       }
 
+      pz.pause()
+
       e.stopPropagation();
       active = true;
 
@@ -270,6 +283,7 @@ class SelfPlayer extends Player {
 
     const drop = e => {
       active = false;
+      pz.resume()
     }
 
     const setTranslate = (xPos, yPos, el) => {
