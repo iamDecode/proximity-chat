@@ -290,19 +290,19 @@ class Player extends PIXI.Container {
 
   render(renderer) {
     if (this.stream) {
-      // if(this.analyser == null) {
-      //   const track = this.stream.getAudioTracks()[0];
-      //   const AudioContext = window.AudioContext || window.webkitAudioContext;
-      //   const context = new AudioContext();
-      //   const source = context.createMediaStreamSource(new MediaStream([track]));
-      //   this.analyser = context.createAnalyser();
-      //   source.connect(this.analyser);
-      // }
+      if(this.analyser == null) {
+        const track = this.stream.getAudioTracks()[0];
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        const context = new AudioContext();
+        const source = context.createMediaStreamSource(new MediaStream([track]));
+        this.analyser = context.createAnalyser();
+        source.connect(this.analyser);
+      }
 
-      // const data = new Uint8Array(this.analyser.frequencyBinCount);
-      // this.analyser.getByteFrequencyData(data);
+      const data = new Uint8Array(this.analyser.frequencyBinCount);
+      this.analyser.getByteFrequencyData(data);
 
-      // this.drawAudioRing(data);  
+      this.drawAudioRing(data);  
 
 
       let width, height;
