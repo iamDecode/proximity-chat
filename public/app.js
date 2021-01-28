@@ -218,24 +218,24 @@ class Player {
   }
 
   render() {
-    // if (this.stream) {
-    //   if(this.analyser == null) {
-    //     const track = this.stream.getAudioTracks()[0];
+    if (this.stream) {
+      if(this.analyser == null) {
+        const track = this.stream.getAudioTracks()[0];
 
-    //     if(track != null) {
-    //       const AudioContext = window.AudioContext || window.webkitAudioContext;
-    //       const context = new AudioContext();
-    //       const source = context.createMediaStreamSource(new MediaStream([track]));
-    //       this.analyser = context.createAnalyser();
-    //       source.connect(this.analyser);
-    //     }
-    //   }
+        if(track != null) {
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          const context = new AudioContext();
+          const source = context.createMediaStreamSource(new MediaStream([track]));
+          this.analyser = context.createAnalyser();
+          source.connect(this.analyser);
+        }
+      }
 
-    //   const data = new Uint8Array(this.analyser.frequencyBinCount);
-    //   this.analyser.getByteFrequencyData(data);
+      const data = new Uint8Array(this.analyser.frequencyBinCount);
+      this.analyser.getByteFrequencyData(data);
 
-    //   this.drawAudioRing(data);  
-    // }
+      this.drawAudioRing(data);  
+    }
   }
 }
 
