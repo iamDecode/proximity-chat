@@ -123,7 +123,7 @@ class MediasoupService {
     if (components[0] == "consume") {
       const { rtpCapabilities, producerKind, userId } = JSON.parse(data.substr(8));
       const producer = this.producers[producerKind].get(userId);
-      console.log('consumes', producerKind, ' from ', userId)
+      console.log(ws.id, 'consumes', producerKind, ' from ', userId, 'with', producer.id)
 
       if (producer != null) {
         const consumer = await this.createConsumer(producer, ws.id, rtpCapabilities);
@@ -132,12 +132,6 @@ class MediasoupService {
         ws.send(String(["consumeAck", null]));
       }
       
-      return
-    }
-
-    if (components[0] == "resume") {
-      await this.consumer.resume();
-      ws.send("resumeAck")
       return
     }
   }
@@ -234,7 +228,6 @@ class MediasoupService {
       await consumer.setPreferredLayers({ spatialLayer: 2, temporalLayer: 2 });
     }
 
-    this.consumer = consumer
     consumer.resume();
 
     return {

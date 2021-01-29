@@ -1,3 +1,5 @@
+'use strict'
+
 let socket;
 
 
@@ -489,7 +491,6 @@ async function startCall(target) {
   if (!player) {
     console.log('couldn\'t find player for stream', call.peer);
   } else if (player.stream == null) {
-    setTimeout(async _ => {
       const stream = new MediaStream();
       const audio = await consume(consumerTransport, 'audio', target);
       stream.addTrack(audio);
@@ -502,7 +503,6 @@ async function startCall(target) {
       player.stream = stream;
       playStream(stream, target);
       console.log('created stream for', target);
-    })
   }
 }
 
