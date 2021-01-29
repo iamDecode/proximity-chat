@@ -29,6 +29,15 @@ Or to wherever the key files are located on your production server.
 ## Running
 Install dependencies with `yarn install` and run with `yarn start`. Open `https://127.0.0.1:3000`, `https://yourexternalip:3000`, or `https://yourlanip:3000` in a supporting browser on multiple devices. 
 
-## Commit lint
+## Docker image
+Proximity Chat can run in a Docker container. There are two images: a production variant using non-SSL mode (see [#ssl]), and a testing variant that generates and embeds a self-signed certificate.
 
+Use the following steps to build and run the testing variant:
+
+    docker build -f Dockerfile_ssl -t proximity-chat-ssl .
+    docker run -d -p 3000:3000 -p 9001:9001 proximity-chat-ssl
+
+Find the IP address of the virtual machine that runs this using `docker-machine ip`. You may want to enable port forwarding from your machine's network IP to the VM's IP, so you can access the VM from other devices in your network.
+
+## Commit lint
 Please commit-lint all commit messages. This should be automatically enforced by Husky.

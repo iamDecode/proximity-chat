@@ -1,0 +1,20 @@
+FROM node:10
+
+WORKDIR /usr/src/app
+
+COPY package.json ./
+COPY package-lock.json ./
+RUN npm install
+
+COPY *.js ./
+COPY public public/
+
+RUN openssl req -new -newkey rsa:2048 -nodes -keyout key.pem \
+                -x509 -out cert.pem \
+                -days 365 -subj "/C=NL/ST=NB/L=Eindhoven/O=Disc/CN=www.demos.nl"
+
+ENV SSL_KEY_PATH="./key.pem"
+ENV SSL_CERT_PATH="./cert.pem"
+
+EXPOSE 3000 9001
+CMD ["node", "main.js"]
