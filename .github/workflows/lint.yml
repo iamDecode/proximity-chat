@@ -1,0 +1,30 @@
+name: Lint
+
+on: push
+
+jobs:
+  run-linters:
+    name: Run linters
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out Git repository
+        uses: actions/checkout@v2
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v1
+        with:
+          node-version: 14
+
+      - name: Install dependencies
+        # --ignore-scripts to skip building Mediasoup's C++ binaries.
+        run: yarn install --immutable --ignore-scripts
+
+      - name: Run eslint
+        uses: wearerequired/lint-action@v1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          eslint: true
+
+      - name: Run commitlint
+        uses: wagoid/commitlint-github-action@v2
