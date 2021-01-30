@@ -54,17 +54,22 @@ if (localStorage.getItem('name') == null) {
 
 const stats = new Stats();
 document.body.appendChild(stats.dom);
-let request
+
 
 const performAnimation = () => {
-  stats.end()
-  request = requestAnimationFrame(performAnimation)
   if (selfPlayer != null) selfPlayer.render() 
   Object.values(players).forEach(p => p.render())
-  stats.begin()
 }
 
-requestAnimationFrame(performAnimation)
+setInterval(performAnimation, 1000/10)
+
+let request
+const measureFps = () => {
+  stats.end()
+  request = requestAnimationFrame(measureFps)
+  stats.begin()
+}
+requestAnimationFrame(measureFps)
 
 
 const $bg = document.querySelector('#background')
@@ -213,7 +218,6 @@ class Player {
     const bottomCutoff = 0.4;
     const scale = Math.max(0 ,((Math.max(...data) / 255) - bottomCutoff) / (1 - bottomCutoff));
     const width = (scale * 0.2) + 1;
-
     this.$elem.style.setProperty('--volume', width)
   }
 
@@ -227,6 +231,7 @@ class Player {
           const context = new AudioContext();
           const source = context.createMediaStreamSource(new MediaStream([track]));
           this.analyser = context.createAnalyser();
+          this.analyser.smoothingTimeConstant = 0.3;
           source.connect(this.analyser);
         }
       }
