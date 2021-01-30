@@ -1,3 +1,5 @@
+'use strict';
+
 class ProximityChatService {
   constructor(usocket) {
     // track which users are connected
