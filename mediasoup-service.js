@@ -175,7 +175,9 @@ class MediasoupService {
 
       console.log('user', ws.id, 'pauses', userId);
       for (const key in consumers) {
-        consumers[key].pause();
+        if (consumers.hasOwnProperty(key)) {
+          consumers[key].pause();
+        }
       }
 
       return;
@@ -187,7 +189,9 @@ class MediasoupService {
 
       console.log('user', ws.id, 'resumes', userId);
       for (const key in consumers) {
-        consumers[key].resume();
+        if (consumers.hasOwnProperty(key)) {
+          consumers[key].resume();
+        }
       }
 
       return;
@@ -198,15 +202,21 @@ class MediasoupService {
     const user = this.users.get(ws.id);
 
     for (const key in user.producer) {
-      user.producer[key].close();
+      if (user.producer.hasOwnProperty(key)) {
+        user.producer[key].close();
+      }
     }
 
     user.consumer.transport.close();
     delete user.consumer.transport;
 
     for (const key in user.consumer) {
-      for (const kind in user.consumer[key]) {
-        user.consumer[key][kind].close();
+      if (user.consumer.hasOwnProperty(key)) {
+        for (const kind in user.consumer[key]) {
+          if (user.consumer[key].hasOwnProperty(kind)) {
+            user.consumer[key][kind].close();
+          }
+        }
       }
     }
 
