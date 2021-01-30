@@ -1,7 +1,6 @@
 const fs = require('fs');
 const {v4: uuidv4} = require('uuid');
 const express = require('express');
-const mediasoup = require('mediasoup');
 const {ProximityChatService} = require('./proximity-chat-service');
 const {MediasoupService} = require('./mediasoup-service');
 
@@ -10,13 +9,14 @@ const uws = require('uWebSockets.js');
 const httpServices = express();
 
 // Set up servers and SSL.
-var httpServer;
-var socketServer;
+let httpServer;
+let socketServer;
 if ((process.env.SSL_CERT_PATH == undefined) !=
     (process.env.SSL_KEY_PATH == undefined)) {
-  throw 'The SSL_CERT_PATH or SSL_KEY_PATH environment variable was set, but ' +
-        'not both. Either define both to make the server work only over HTTPS, ' +
-        'or neither to make the server only work over HTTP';
+  throw new Error(
+      'The SSL_CERT_PATH or SSL_KEY_PATH environment variable was set, but ' +
+      'not both. Either define both to make the server work only over HTTPS, ' +
+      'or neither to make the server only work over HTTP');
 } else if (process.env.SSL_CERT_PATH) {
   const https = require('https');
 
@@ -24,7 +24,7 @@ if ((process.env.SSL_CERT_PATH == undefined) !=
     cert: fs.readFileSync(process.env.SSL_CERT_PATH),
     key: fs.readFileSync(process.env.SSL_KEY_PATH),
   }, httpServices);
-  socketServer = uws.SSLApp({
+  socketServer = uws.SSLApp({ // eslint-disable-line new-cap
     key_file_name: process.env.SSL_KEY_PATH,
     cert_file_name: process.env.SSL_CERT_PATH,
   });
@@ -34,7 +34,7 @@ if ((process.env.SSL_CERT_PATH == undefined) !=
   const http = require('http');
 
   httpServer = http.createServer(httpServices);
-  socketServer = uws.App();
+  socketServer = uws.App(); // eslint-disable-line new-cap
 
   console.log('Loading server without encryption.');
 }
