@@ -107,7 +107,6 @@ class MediasoupService {
 
     if (components[0] == "produce") {
       const {kind, rtpParameters} = JSON.parse(data.substr(components[0].length + components[1].length + 2));
-      console.log(ws.id, 'produces', kind)
       const producer = await this.producerTransports.get(ws.id).produce({ kind, rtpParameters });
       this.producers[kind].set(ws.id, producer);
       ws.send(String(["ACK", requestId, producer.id]))
@@ -117,7 +116,6 @@ class MediasoupService {
     if (components[0] == "consume") {
       const { rtpCapabilities, producerKind, userId } = JSON.parse(data.substr(components[0].length + components[1].length + 2));
       const producer = this.producers[producerKind].get(userId);
-      console.log(ws.id, 'consumes', producerKind, ' from ', userId, 'with', producer.id)
 
       if (producer != null) {
         const consumer = await this.createConsumer(producer, ws.id, rtpCapabilities);
