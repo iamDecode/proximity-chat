@@ -11,7 +11,8 @@
     },
     "rules": {
         "require-jsdoc": "off",
-        "max-len": "warn"
+        "max-len": "warn",
+        "strict": ["error", "global"]
     },
     "ignorePatterns": ["public/vendor/**"]
 }
