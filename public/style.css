@@ -42,8 +42,14 @@ html, body {
   will-change: transform;
 }
 
+.player * {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
 .player.self { 
   z-index: 5;
+  cursor: move;
 }
 
 .player .avatar {
