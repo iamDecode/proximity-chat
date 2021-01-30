@@ -16,6 +16,8 @@ html, body {
   width: 3200px;
   height: 1800px;
   background: url('/public/assets/room.png');
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
 }
 
 .player {
@@ -29,6 +31,8 @@ html, body {
   width: 125px;
   height: 125px;
   transform: translate3d(var(--translate-x), var(--translate-y), 0px) scale(var(--scale));
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
 
   color: white;
   font-size: 50px;
@@ -65,6 +69,9 @@ html, body {
   opacity: calc(((var(--volume) - 1) / 0.2) + 0.1);
   transform: scale(var(--volume));
   will-change: opacity, transform;
+  transition: transform 0.1s linear;
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
 }
 
 .player video {
