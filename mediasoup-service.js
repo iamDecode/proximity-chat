@@ -1,8 +1,8 @@
-const mediasoup = require('mediasoup')
-const os = require('os')
+const mediasoup = require('mediasoup');
+const os = require('os');
 
 const config = {
-  numWorkers : Object.keys(os.cpus()).length,
+  numWorkers: Object.keys(os.cpus()).length,
   // Worker settings
   worker: {
     rtcMinPort: 10000,
@@ -30,7 +30,7 @@ const config = {
           kind: 'audio',
           mimeType: 'audio/opus',
           clockRate: 48000,
-          channels: 2
+          channels: 2,
         },
         {
           kind: 'video',
@@ -38,40 +38,40 @@ const config = {
           clockRate: 90000,
           parameters:
             {
-              'x-google-start-bitrate': 1000
-            }
+              'x-google-start-bitrate': 1000,
+            },
         },
-      ]
+      ],
   },
   // WebRtcTransport settings
   webRtcTransport: {
     listenIps: [
       {
-        ip: '0.0.0.0',      
-        announcedIp: '127.0.0.1' // replace by public IP address
-      }
+        ip: '0.0.0.0',
+        announcedIp: '127.0.0.1', // replace by public IP address
+      },
     ],
     maxIncomingBitrate: 1500000,
-    initialAvailableOutgoingBitrate: 1000000
-  }
-}
+    initialAvailableOutgoingBitrate: 1000000,
+  },
+};
 
 class MediasoupService {
   constructor(usocket) {
-    this.runMediasoupWorker()
+    this.runMediasoupWorker();
 
-    /** 
+    /**
       * {
-      *   producer: { 
-      *     transport: WebRtcTransport, 
-      *     audio: Producer, 
+      *   producer: {
+      *     transport: WebRtcTransport,
+      *     audio: Producer,
       *     video: Producer
       *   },
       *   consumer {
       *     transport: WebRtcTransport,
-      *     userId: { 
+      *     userId: {
       *       audio: Consumer,
-      *       video: Consumer 
+      *       video: Consumer
       *     }
       *   }
       * }
@@ -80,74 +80,74 @@ class MediasoupService {
   }
 
   async message(ws, message, isBinary) {
-    const data = Buffer.from(message).toString()
-    const components = data.split(",");
-    const requestId = components[1]
+    const data = Buffer.from(message).toString();
+    const components = data.split(',');
+    const requestId = components[1];
 
-    if (components[0] == "getRouterRtpCapabilities") {
+    if (components[0] == 'getRouterRtpCapabilities') {
       this.users.set(ws.id, {
-        producer: { 
+        producer: {
           transport: null,
           audio: null,
-          video: null
+          video: null,
         },
-        consumer: { 
-          transport: null
-        }
-      })
-      ws.send(String(["ACK", requestId, JSON.stringify(this.router.rtpCapabilities)]))
-      return 
+        consumer: {
+          transport: null,
+        },
+      });
+      ws.send(String(['ACK', requestId, JSON.stringify(this.router.rtpCapabilities)]));
+      return;
     }
 
     if (components[0] == 'createProducerTransport') {
-      const { transport, params } = await this.createWebRtcTransport();
-      const user = this.users.get(ws.id)
+      const {transport, params} = await this.createWebRtcTransport();
+      const user = this.users.get(ws.id);
       user.producer.transport = transport;
       this.users.set(ws.id, user);
-      ws.send(String(["ACK", requestId, JSON.stringify(params)]))
-      return
+      ws.send(String(['ACK', requestId, JSON.stringify(params)]));
+      return;
     }
 
     if (components[0] == 'createConsumerTransport') {
-      const { transport, params } = await this.createWebRtcTransport();
-      const user = this.users.get(ws.id)
+      const {transport, params} = await this.createWebRtcTransport();
+      const user = this.users.get(ws.id);
       user.consumer.transport = transport;
       this.users.set(ws.id, user);
-      ws.send(String(["ACK", requestId, JSON.stringify(params)]))
-      return
+      ws.send(String(['ACK', requestId, JSON.stringify(params)]));
+      return;
     }
 
-    if (components[0] == "connectProducerTransport") {
-      const args = data.substr(components[0].length + components[1].length + 2)
-      const params = JSON.parse(args)
-      await this.users.get(ws.id).producer.transport.connect({ dtlsParameters: params });
-      ws.send(String(["ACK", requestId]))
-      return
+    if (components[0] == 'connectProducerTransport') {
+      const args = data.substr(components[0].length + components[1].length + 2);
+      const params = JSON.parse(args);
+      await this.users.get(ws.id).producer.transport.connect({dtlsParameters: params});
+      ws.send(String(['ACK', requestId]));
+      return;
     }
 
-    if (components[0] == "connectConsumerTransport") {
-      const args = data.substr(components[0].length + components[1].length + 2)
-      const params = JSON.parse(args).dtlsParameters
-      await this.users.get(ws.id).consumer.transport.connect({ dtlsParameters: params });
-      ws.send(String(["ACK", requestId]))
-      return
+    if (components[0] == 'connectConsumerTransport') {
+      const args = data.substr(components[0].length + components[1].length + 2);
+      const params = JSON.parse(args).dtlsParameters;
+      await this.users.get(ws.id).consumer.transport.connect({dtlsParameters: params});
+      ws.send(String(['ACK', requestId]));
+      return;
     }
 
-    if (components[0] == "produce") {
-      const args = data.substr(components[0].length + components[1].length + 2)
+    if (components[0] == 'produce') {
+      const args = data.substr(components[0].length + components[1].length + 2);
       const {kind, rtpParameters} = JSON.parse(args);
-      const producer = await this.users.get(ws.id).producer.transport.produce({ kind, rtpParameters });
+      const producer = await this.users.get(ws.id).producer.transport.produce({kind, rtpParameters});
       const user = this.users.get(ws.id);
       user.producer[kind] = producer;
       this.users.set(ws.id, user);
-      ws.send(String(["ACK", requestId, producer.id]))
-      return
+      ws.send(String(['ACK', requestId, producer.id]));
+      return;
     }
 
-    if (components[0] == "consume") {
-      const args = data.substr(components[0].length + components[1].length + 2)
-      const { rtpCapabilities, producerKind, userId } = JSON.parse(args);
-      const user = this.users.get(userId)
+    if (components[0] == 'consume') {
+      const args = data.substr(components[0].length + components[1].length + 2);
+      const {rtpCapabilities, producerKind, userId} = JSON.parse(args);
+      const user = this.users.get(userId);
       const producer = user.producer[producerKind];
 
       if (producer != null) {
@@ -161,56 +161,56 @@ class MediasoupService {
         }
 
         this.users.set(ws.id, user);
-        ws.send(String(["ACK", requestId, JSON.stringify(params)]));
+        ws.send(String(['ACK', requestId, JSON.stringify(params)]));
       } else {
-        ws.send(String(["ACK", requestId, null]));
+        ws.send(String(['ACK', requestId, null]));
       }
-      
-      return
+
+      return;
     }
 
-    if (components[0] == "pause") {
-      const userId = data.substr(components[0].length + components[1].length + 2)
-      const consumers = this.users.get(ws.id).consumer[userId]
+    if (components[0] == 'pause') {
+      const userId = data.substr(components[0].length + components[1].length + 2);
+      const consumers = this.users.get(ws.id).consumer[userId];
 
-      console.log('user', ws.id, 'pauses', userId)
+      console.log('user', ws.id, 'pauses', userId);
       for (const key in consumers) {
-        consumers[key].pause()
+        consumers[key].pause();
       }
 
-      return
+      return;
     }
 
-    if (components[0] == "resume") {
-      const userId = data.substr(components[0].length + components[1].length + 2)
-      const consumers = this.users.get(ws.id).consumer[userId]
+    if (components[0] == 'resume') {
+      const userId = data.substr(components[0].length + components[1].length + 2);
+      const consumers = this.users.get(ws.id).consumer[userId];
 
-      console.log('user', ws.id, 'resumes', userId)
+      console.log('user', ws.id, 'resumes', userId);
       for (const key in consumers) {
-        consumers[key].resume()
+        consumers[key].resume();
       }
-      
-      return
+
+      return;
     }
   }
 
   async close(ws, code, message) {
-    const user = this.users.get(ws.id)
+    const user = this.users.get(ws.id);
 
     for (const key in user.producer) {
-      user.producer[key].close()
+      user.producer[key].close();
     }
-    
-    user.consumer.transport.close()
-    delete user.consumer.transport
+
+    user.consumer.transport.close();
+    delete user.consumer.transport;
 
     for (const key in user.consumer) {
       for (const kind in user.consumer[key]) {
-        user.consumer[key][kind].close()
+        user.consumer[key][kind].close();
       }
     }
 
-    this.users.delete(ws.id)
+    this.users.delete(ws.id);
   }
 
   async runMediasoupWorker() {
@@ -227,13 +227,13 @@ class MediasoupService {
     });
 
     const mediaCodecs = config.router.mediaCodecs;
-    this.router = await worker.createRouter({ mediaCodecs });
+    this.router = await worker.createRouter({mediaCodecs});
   }
 
   async createWebRtcTransport() {
     const {
       maxIncomingBitrate,
-      initialAvailableOutgoingBitrate
+      initialAvailableOutgoingBitrate,
     } = config.webRtcTransport;
 
     const transport = await this.router.createWebRtcTransport({
@@ -247,7 +247,7 @@ class MediasoupService {
       try {
         await transport.setMaxIncomingBitrate(maxIncomingBitrate);
       } catch (error) {
-        console.err(error)
+        console.err(error);
       }
     }
     return {
@@ -256,17 +256,17 @@ class MediasoupService {
         id: transport.id,
         iceParameters: transport.iceParameters,
         iceCandidates: transport.iceCandidates,
-        dtlsParameters: transport.dtlsParameters
+        dtlsParameters: transport.dtlsParameters,
       },
     };
   }
 
   async createConsumer(producer, transport, rtpCapabilities) {
     if (!this.router.canConsume(
-      {
-        producerId: producer.id,
-        rtpCapabilities,
-      })
+        {
+          producerId: producer.id,
+          rtpCapabilities,
+        })
     ) {
       console.error('can not consume');
       return;
@@ -284,7 +284,7 @@ class MediasoupService {
     }
 
     if (consumer.type === 'simulcast') {
-      await consumer.setPreferredLayers({ spatialLayer: 2, temporalLayer: 2 });
+      await consumer.setPreferredLayers({spatialLayer: 2, temporalLayer: 2});
     }
 
     consumer.resume();
@@ -295,9 +295,9 @@ class MediasoupService {
       kind: consumer.kind,
       rtpParameters: consumer.rtpParameters,
       type: consumer.type,
-      producerPaused: consumer.producerPaused
+      producerPaused: consumer.producerPaused,
     }];
   }
 }
 
-module.exports = { MediasoupService };
+module.exports = {MediasoupService};
