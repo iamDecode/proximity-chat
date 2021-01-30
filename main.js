@@ -1,5 +1,5 @@
 const fs = require('fs');
-const {v4 : v4uuid } = require('uuid');
+const { v4: uuidv4 } = require('uuid');
 const express = require('express');
 const mediasoup = require('mediasoup');
 const { ProximityChatService } = require('./proximity-chat-service');
