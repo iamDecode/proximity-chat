@@ -62,10 +62,9 @@ const performAnimation = () => {
 
 setInterval(performAnimation, 1000/10);
 
-let request;
 const measureFps = () => {
   stats.end();
-  request = requestAnimationFrame(measureFps);
+  requestAnimationFrame(measureFps);
   stats.begin();
 };
 requestAnimationFrame(measureFps);
@@ -648,6 +647,10 @@ function initSocket() {
   socket.requestId = 0;
 
   socket.onmessage = async (message) => {
+    /* eslint-disable brace-style
+       --
+       The if/else if below read nicer with a blank line between them. */
+
     let data;
     if (message.data[0] == '{') {
       data = JSON.parse(message.data);

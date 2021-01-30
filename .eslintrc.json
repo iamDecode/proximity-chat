@@ -10,7 +10,8 @@
         "ecmaVersion": 12
     },
     "rules": {
-        "require-jsdoc": "off"
+        "require-jsdoc": "off",
+        "max-len": "warn"
     },
     "ignorePatterns": ["public/vendor/**"]
 }
