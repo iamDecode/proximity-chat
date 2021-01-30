@@ -122,6 +122,9 @@ html, body {
   content: 'campaign';
 }
 
+.player:not(.audio-enabled) {
+  --volume: 0 !important;
+}
 .player:not(.audio-enabled) .icon {
   background: #ff586d;
 }

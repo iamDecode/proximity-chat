@@ -103,12 +103,13 @@ class Player {
     this.$elem.style.setProperty('--translate-y', `${this.y}px`)
     this.broadcast = false
     this._audioEnabled = true
-    this._videoEnabled = true
+    this._videoEnabled = false
   }
 
   initElement() {
     const $elem = document.createElement('div')
     $elem.classList.add('player')
+    $elem.classList.add('audio-enabled')
     $elem.style.setProperty('--color', `#${this.color.toString(16)}`);
     $elem.style.setProperty('--color-light', `#${lighten(this.color, 60).toString(16)}`);
 
@@ -128,11 +129,6 @@ class Player {
   addVideo(element) {
     this.$video = element
     this.$elem.appendChild(element)
-    this.$elem.classList.add('audio-enabled') // TODO: should be there from the strat, users are confused they are muted initially
-
-    if(this.stream.getVideoTracks().length > 0) {
-      this.$elem.classList.add('video-enabled')
-    }
   }
 
   setMic(enabled) {
@@ -426,7 +422,6 @@ function playStream(stream, target) {
   // create the video element for the stream
   const elem = document.createElement('video');
   elem.srcObject = stream;
-  elem.muted = true;
   elem.autoplay = true;
   elem.playsInline = true;
 
@@ -436,33 +431,14 @@ function playStream(stream, target) {
 
   // add it to the player
   if (target instanceof SelfPlayer) {
+    elem.muted = true;
     elem.setAttribute('data-peer', target.id);
-    
-    // iOS will stop playing the video when video is not used in webrtc or present in DOM.
-    if (iOS()) {
-      document.querySelectorAll('video').forEach(e => e.parentNode.removeChild(e))
-      document.body.appendChild(elem)
-    }
-    
     target.addVideo(elem);
   } else {
     elem.setAttribute('data-peer', target);
     const player = players[target];
     player.addVideo(elem);
   }
-}
-
-function iOS() {
-  return [
-    'iPad Simulator',
-    'iPhone Simulator',
-    'iPod Simulator',
-    'iPad',
-    'iPhone',
-    'iPod'
-  ].includes(navigator.platform)
-  // iPad on iOS 13 detection
-  || (navigator.userAgent.includes("Mac") && "ontouchend" in document)
 }
 
 let pendingJoins = [];
@@ -486,6 +462,7 @@ async function startCall(target) {
 
       player.stream = stream;
       playStream(stream, target);
+      player.setPosition(player.x, player.y) // To ensure volume relative to position is set correctly
       console.log('created stream for', target);
   }
 }
@@ -672,6 +649,8 @@ function initSocket() {
       const name = localStorage.getItem('name')
       selfPlayer = new SelfPlayer(data.id, name, {x:100, y:100})
       selfPlayer.stream = stream;
+      selfPlayer.audioEnabled = stream.getAudioTracks()[0] != null
+      selfPlayer.videoEnabled = stream.getVideoTracks()[0] != null
       playStream(stream, selfPlayer)
 
       setInterval(_ => {
@@ -709,7 +688,12 @@ function initSocket() {
       }
 
       console.log('calling', data.join.id);
-      players[data.join.id] = new Player(data.join.id, data.join.name, data.join.pos);
+      const player = new Player(data.join.id, data.join.name, data.join.pos);
+
+      player.audioEnabled = true
+      player.videoEnabled = true
+
+      players[data.join.id] = player
 
       if (consumerTransport == null) {
         pendingJoins.push(data.join.id)
