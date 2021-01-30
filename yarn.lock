@@ -2,7 +2,7 @@
 # yarn lockfile v1
 
 
-"@types/node@^14.14.19":
+"@types/node@^14.14.22":
   version "14.14.22"
   resolved "https://registry.yarnpkg.com/@types/node/-/node-14.14.22.tgz#0d29f382472c4ccf3bd96ff0ce47daf5b7b84b18"
   integrity sha512-g+f/qj/cNcqKkc3tFqlXOYjrmZA+jNBiDzbP3kH+B+otKFqAdPgVTGP1IeKRdMml/aE69as5S4FqtxAbl+LaMw==
@@ -566,18 +566,18 @@ media-typer@0.3.0:
   resolved "https://registry.yarnpkg.com/media-typer/-/media-typer-0.3.0.tgz#8710d7af0aa626f8fffa1ce00168545263255748"
   integrity sha1-hxDXrwqmJvj/+hzgAWhUUmMlV0g=
 
-mediasoup@3:
-  version "3.6.31"
-  resolved "https://registry.yarnpkg.com/mediasoup/-/mediasoup-3.6.31.tgz#4a7f5d693234f4cfe02c0cfd403e6d32785b7a04"
-  integrity sha512-EW5sWZNrYVJQiSvkMaphUZYr5Csi20M0eVlCvdJCKTplLOHQkQmKybS+/bh3nMchQjmWF6tU4SdMn2+HxlVPAQ==
+mediasoup@^3.6.31:
+  version "3.6.32"
+  resolved "https://registry.yarnpkg.com/mediasoup/-/mediasoup-3.6.32.tgz#30c2a10c57fbb4f89a5783a2b54d8422ba143a63"
+  integrity sha512-2wJndAFYh2p7ygcTHORyRx4uYfMmPX7oAfn/xBxJZdrE4lvBIZXo9NGiz18qn9Y22ch/QqwJVRWgTLT3jde3CA==
   dependencies:
-    "@types/node" "^14.14.19"
+    "@types/node" "^14.14.22"
     awaitqueue "^2.3.3"
     debug "^4.3.1"
     h264-profile-level-id "^1.0.1"
     netstring "^0.3.0"
     random-number "^0.0.9"
-    supports-color "^8.1.0"
+    supports-color "^8.1.1"
     uuid "^8.3.2"
   optionalDependencies:
     clang-tools-prebuilt "^0.1.4"
@@ -1058,7 +1058,7 @@ strip-indent@^1.0.1:
   dependencies:
     get-stdin "^4.0.1"
 
-supports-color@^8.1.0:
+supports-color@^8.1.1:
   version "8.1.1"
   resolved "https://registry.yarnpkg.com/supports-color/-/supports-color-8.1.1.tgz#cd6fc17e28500cff56c1b86c0a7fd4a54a73005c"
   integrity sha512-MpUEN2OodtUzxvKQl72cUF7RQ5EiHsGvSsVG0ia9c5RbWGL2CI4C7EpPS8UTBIplnlzZiNuV56w+FuNxy3ty2Q==

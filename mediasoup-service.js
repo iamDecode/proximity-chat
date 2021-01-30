@@ -79,57 +79,58 @@ class MediasoupService {
   async message(ws, message, isBinary) {
     const data = Buffer.from(message).toString()
     const components = data.split(",");
+    const requestId = components[1]
 
-    if (data == "getRouterRtpCapabilities") {
-      ws.send(String(["getRouterRtpCapabilitiesAck", JSON.stringify(this.router.rtpCapabilities)]))
+    if (components[0] == "getRouterRtpCapabilities") {
+      ws.send(String(["ACK", requestId, JSON.stringify(this.router.rtpCapabilities)]))
       return 
     }
 
     if (components[0] == 'createProducerTransport') {
       const { transport, params } = await this.createWebRtcTransport();
       this.producerTransports.set(ws.id, transport);
-      ws.send(String(["createProducerTransportAck", JSON.stringify(params)]))
+      ws.send(String(["ACK", requestId, JSON.stringify(params)]))
       return
     }
 
     if (components[0] == 'createConsumerTransport') {
       const { transport, params } = await this.createWebRtcTransport();
       this.consumerTransports.set(ws.id, transport);
-      ws.send(String(["createConsumerTransportAck", JSON.stringify(params)]))
+      ws.send(String(["ACK", requestId, JSON.stringify(params)]))
       return
     }
 
     if (components[0] == "connectProducerTransport") {
-      await this.producerTransports.get(ws.id).connect({ dtlsParameters: JSON.parse(data.substr(25)) });
-      ws.send("connectProducerTransportAck")
+      await this.producerTransports.get(ws.id).connect({ dtlsParameters: JSON.parse(data.substr(components[0].length + components[1].length + 2)) });
+      ws.send(String(["ACK", requestId]))
       return
     }
 
     if (components[0] == "connectConsumerTransport") {
-      await this.consumerTransports.get(ws.id).connect({ dtlsParameters: JSON.parse(data.substr(25)).dtlsParameters });
-      ws.send("connectConsumerTransportAck")
+      await this.consumerTransports.get(ws.id).connect({ dtlsParameters: JSON.parse(data.substr(components[0].length + components[1].length + 2)).dtlsParameters });
+      ws.send(String(["ACK", requestId]))
       return
     }
 
     if (components[0] == "produce") {
-      const {kind, rtpParameters} = JSON.parse(data.substr(8));
+      const {kind, rtpParameters} = JSON.parse(data.substr(components[0].length + components[1].length + 2));
       console.log(ws.id, 'produces', kind)
       const producer = await this.producerTransports.get(ws.id).produce({ kind, rtpParameters });
       this.producers[kind].set(ws.id, producer);
-      ws.send(String(["produceAck", producer.id]))
+      ws.send(String(["ACK", requestId, producer.id]))
       return
     }
 
     if (components[0] == "consume") {
-      const { rtpCapabilities, producerKind, userId } = JSON.parse(data.substr(8));
+      const { rtpCapabilities, producerKind, userId } = JSON.parse(data.substr(components[0].length + components[1].length + 2));
       const producer = this.producers[producerKind].get(userId);
       console.log(ws.id, 'consumes', producerKind, ' from ', userId, 'with', producer.id)
 
       if (producer != null) {
         const consumer = await this.createConsumer(producer, ws.id, rtpCapabilities);
-        ws.send(String(["consumeAck", JSON.stringify(consumer)]));
+        ws.send(String(["ACK", requestId, JSON.stringify(consumer)]));
       } else {
-        ws.send(String(["consumeAck", null]));
+        ws.send(String(["ACK", requestId, null]));
       }
       
       return

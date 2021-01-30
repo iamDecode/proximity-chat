@@ -2,21 +2,23 @@
 
 let socket;
 
+function socketSend(command, arg) {
+  const requestId = socket.requestId++
 
-function socketSend(command, arg, ack) {
   return new Promise((res, rej) => {
     const check = function(message) {
       const components = message.data.split(',')
-      if (components[0] === ack) {
+      if (components[0] === 'ACK' && components[1] == requestId) {
         socket.removeEventListener('message', check)
-        res(message.data.substr(ack.length + 1))
+        res(message.data.substr(components[0].length + components[1].length + 2))
       }
     }
     socket.addEventListener('message', check);
     if (arg != null) {
-      socket.send([command, arg]);
+
+      socket.send([command, requestId, arg]);
     } else {
-      socket.send(command);
+      socket.send([command, requestId]);
     }
   })
 }
@@ -528,13 +530,13 @@ async function initProducerTransport() {
   const data = await socketSend('createProducerTransport', JSON.stringify({
     forceTcp: false,
     rtpCapabilities: device.rtpCapabilities,
-  }), "createProducerTransportAck")
+  }))
 
   const transport = device.createSendTransport(JSON.parse(data));
 
   transport.on('connect', async ({ dtlsParameters }, callback, errback) => {
     try {
-      await socketSend('connectProducerTransport', JSON.stringify(dtlsParameters), 'connectProducerTransportAck')
+      await socketSend('connectProducerTransport', JSON.stringify(dtlsParameters))
       callback()
     } catch(e) {
       errback(e)
@@ -547,7 +549,7 @@ async function initProducerTransport() {
         transportId: transport.id,
         kind,
         rtpParameters,
-      }), 'produceAck')
+      }))
       callback({ id })
     } catch(e) {
       errback(e)
@@ -579,7 +581,7 @@ async function initProducerTransport() {
 async function initConsumerTransport() {
   const data = await socketSend('createConsumerTransport', JSON.stringify({
     forceTcp: false,
-  }), "createConsumerTransportAck")
+  }))
 
   const transport = device.createRecvTransport(JSON.parse(data));
 
@@ -588,7 +590,7 @@ async function initConsumerTransport() {
       await socketSend('connectConsumerTransport', JSON.stringify({
         transportId: transport.id,
         dtlsParameters
-      }), 'connectConsumerTransportAck')
+      }))
       callback()
     } catch(e) {
       errback(e)
@@ -623,7 +625,7 @@ async function initConsumerTransport() {
 
 async function consume(transport, producerKind, userId) {
   const { rtpCapabilities } = device;
-  const data = await socketSend('consume', JSON.stringify({ userId, producerKind, rtpCapabilities }), 'consumeAck');
+  const data = await socketSend('consume', JSON.stringify({ userId, producerKind, rtpCapabilities }));
 
   if (data == "") {
     console.log("data was empty for", producerKind, 'for user', userId)
@@ -664,6 +666,8 @@ async function getStream(constraints, isWebcam) {
 
 function initSocket() {
   socket = new WebSocket(`wss://${location.hostname}:9001`);
+  socket.requestId = 0
+
   socket.onmessage = async (message) => {
     let data;
     if (message.data[0] == "{") {
@@ -770,7 +774,7 @@ function initSocket() {
 }
 
 async function initMediasoup() {
-    const rtpCapabilities = await socketSend('getRouterRtpCapabilities', null, 'getRouterRtpCapabilitiesAck')
+    const rtpCapabilities = await socketSend('getRouterRtpCapabilities')
 
     await loadDevice(JSON.parse(rtpCapabilities))
 
@@ -929,7 +933,7 @@ function handleError(error) {
   throw error;
 }
 
-sinkId = null
+let sinkId = null
 audioOutputSelect.onchange = _ => {
   const audioDestination = audioOutputSelect.value;
   sinkId = audioDestination;
