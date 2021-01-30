@@ -129,21 +129,27 @@ class MediasoupService {
   }
 
   async close(ws, code, message) {
+    const producerTransport = this.producerTransports.get(ws.id)
+    const consumerTransport = this.producerTransports.get(ws.id)
+
+    producerTransport.close()
+    this.producerTransports.delete(ws.id)
+
+    consumerTransport.close()
+    this.consumerTransports.delete(ws.id)
+
     const audioProducer = this.producers.audio.get(ws.id)
-    const videoProducer = this.producers.video.get(ws.id)
     
     if (audioProducer != null) {
       audioProducer.close()
       this.producers.audio.delete(ws.id)
     }
 
+    const videoProducer = this.producers.video.get(ws.id)
     if (videoProducer != null) {
       videoProducer.close()
       this.producers.video.delete(ws.id)
     }
-
-    this.producerTransports.delete(ws.id)
-    this.consumerTransports.delete(ws.id)
   }
 
   async runMediasoupWorker() {
