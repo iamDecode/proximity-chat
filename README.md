@@ -46,5 +46,5 @@ This also binds your local `public` directory to the container, so that you can 
 
 Find the IP address of the virtual machine that runs this using `docker-machine ip`. You may want to enable port forwarding from your machine's network IP to the VM's IP, so you can access the VM from other devices in your network.
 
-## Commit lint
-Please commit-lint all commit messages. This should be automatically enforced by Husky.
+## Lint
+Please lint and commit-lint all commits. This is automatically checked on pull requests.
