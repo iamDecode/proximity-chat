@@ -118,21 +118,24 @@ class MediasoupService {
     }
 
     if (components[0] == "connectProducerTransport") {
-      const params = JSON.parse(data.substr(components[0].length + components[1].length + 2))
+      const args = data.substr(components[0].length + components[1].length + 2)
+      const params = JSON.parse(args)
       await this.users.get(ws.id).producer.transport.connect({ dtlsParameters: params });
       ws.send(String(["ACK", requestId]))
       return
     }
 
     if (components[0] == "connectConsumerTransport") {
-      const params = JSON.parse(data.substr(components[0].length + components[1].length + 2)).dtlsParameters
+      const args = data.substr(components[0].length + components[1].length + 2)
+      const params = JSON.parse(args).dtlsParameters
       await this.users.get(ws.id).consumer.transport.connect({ dtlsParameters: params });
       ws.send(String(["ACK", requestId]))
       return
     }
 
     if (components[0] == "produce") {
-      const {kind, rtpParameters} = JSON.parse(data.substr(components[0].length + components[1].length + 2));
+      const args = data.substr(components[0].length + components[1].length + 2)
+      const {kind, rtpParameters} = JSON.parse(args);
       const producer = await this.users.get(ws.id).producer.transport.produce({ kind, rtpParameters });
       const user = this.users.get(ws.id);
       user.producer[kind] = producer;
@@ -142,7 +145,8 @@ class MediasoupService {
     }
 
     if (components[0] == "consume") {
-      const { rtpCapabilities, producerKind, userId } = JSON.parse(data.substr(components[0].length + components[1].length + 2));
+      const args = data.substr(components[0].length + components[1].length + 2)
+      const { rtpCapabilities, producerKind, userId } = JSON.parse(args);
       const user = this.users.get(userId)
       const producer = user.producer[producerKind];
 
