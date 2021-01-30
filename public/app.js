@@ -418,7 +418,7 @@ let selfPlayer;
 const players = {};
 
 // play stream
-function playStream(stream, target) {
+async function playStream(stream, target) {
   // create the video element for the stream
   const elem = document.createElement('video');
   elem.srcObject = stream;
@@ -439,6 +439,8 @@ function playStream(stream, target) {
     const player = players[target];
     player.addVideo(elem);
   }
+
+  await elem.play();
 }
 
 let pendingJoins = [];
@@ -461,7 +463,7 @@ async function startCall(target) {
       }
 
       player.stream = stream;
-      playStream(stream, target);
+      await playStream(stream, target);
       player.setPosition(player.x, player.y) // To ensure volume relative to position is set correctly
       console.log('created stream for', target);
   }
@@ -651,7 +653,7 @@ function initSocket() {
       selfPlayer.stream = stream;
       selfPlayer.audioEnabled = stream.getAudioTracks()[0] != null
       selfPlayer.videoEnabled = stream.getVideoTracks()[0] != null
-      playStream(stream, selfPlayer)
+      await playStream(stream, selfPlayer)
 
       setInterval(_ => {
         socket.send("ping")
