@@ -1,3 +1,5 @@
+'use strict';
+
 const mediasoup = require('mediasoup');
 const os = require('os');
 
