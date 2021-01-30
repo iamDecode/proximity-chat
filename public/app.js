@@ -156,12 +156,15 @@ class Player {
       this.$video.volume = volume;
 
       const enabled = volume !== 0
-      this.$video.muted = !enabled;
-      this.setMic(enabled)
-      this.setCam(enabled)
 
-      if (this.videoEnabled) {
-        this.$elem.classList.toggle('video-enabled', enabled)
+      if (this.$video.muted != !enabled) {
+        this.$video.muted = !enabled;  
+
+        socketSend(enabled ? 'resume' : 'pause', this.id)
+
+        if (this.videoEnabled) {
+          this.$elem.classList.toggle('video-enabled', enabled)
+        }
       }
     }
 
