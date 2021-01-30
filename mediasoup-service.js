@@ -87,7 +87,7 @@ class MediasoupService {
     if (components[0] == "getRouterRtpCapabilities") {
       this.users.set(ws.id, {
         producer: { 
-          tranport: null,
+          transport: null,
           audio: null,
           video: null
         },
@@ -152,12 +152,42 @@ class MediasoupService {
 
       if (producer != null) {
         const user = this.users.get(ws.id);
-        const consumer = await this.createConsumer(producer, user.consumer.transport, rtpCapabilities);
-        user.consumer[userId] = consumer;
+        const [consumer, params] = await this.createConsumer(producer, user.consumer.transport, rtpCapabilities);
+
+        if (user.consumer[userId] == null) {
+          user.consumer[userId] = {[producerKind]: consumer};
+        } else {
+          user.consumer[userId][producerKind] = consumer;
+        }
+
         this.users.set(ws.id, user);
-        ws.send(String(["ACK", requestId, JSON.stringify(consumer)]));
+        ws.send(String(["ACK", requestId, JSON.stringify(params)]));
       } else {
         ws.send(String(["ACK", requestId, null]));
+      }
+      
+      return
+    }
+
+    if (components[0] == "pause") {
+      const userId = data.substr(components[0].length + components[1].length + 2)
+      const consumers = this.users.get(ws.id).consumer[userId]
+
+      console.log('user', ws.id, 'pauses', userId)
+      for (const key in consumers) {
+        consumers[key].pause()
+      }
+
+      return
+    }
+
+    if (components[0] == "resume") {
+      const userId = data.substr(components[0].length + components[1].length + 2)
+      const consumers = this.users.get(ws.id).consumer[userId]
+
+      console.log('user', ws.id, 'resumes', userId)
+      for (const key in consumers) {
+        consumers[key].resume()
       }
       
       return
@@ -167,11 +197,18 @@ class MediasoupService {
   async close(ws, code, message) {
     const user = this.users.get(ws.id)
 
-    user.producer.transport.close()
+    for (const key in user.producer) {
+      user.producer[key].close()
+    }
+    
     user.consumer.transport.close()
+    delete user.consumer.transport
 
-    if (user.producer.audio != null) user.producer.audio.close()
-    if (user.producer.video != null) user.producer.video.close()
+    for (const key in user.consumer) {
+      for (const kind in user.consumer[key]) {
+        user.consumer[key][kind].close()
+      }
+    }
 
     this.users.delete(ws.id)
   }
@@ -252,14 +289,14 @@ class MediasoupService {
 
     consumer.resume();
 
-    return {
+    return [consumer, {
       producerId: producer.id,
       id: consumer.id,
       kind: consumer.kind,
       rtpParameters: consumer.rtpParameters,
       type: consumer.type,
       producerPaused: consumer.producerPaused
-    };
+    }];
   }
 }
 
