@@ -457,7 +457,10 @@ async function playStream(stream, target) {
     player.addVideo(elem);
   }
 
-  await elem.play();
+  try {
+    await elem.play();
+  } catch (e) {
+  }
 }
 
 let pendingJoins = [];
