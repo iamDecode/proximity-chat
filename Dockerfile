@@ -9,5 +9,5 @@ RUN yarn install
 COPY *.js ./
 COPY public public/
 
-EXPOSE 3000 9001
+EXPOSE 3000 9001 10000-11000
 CMD ["node", "main.js"]

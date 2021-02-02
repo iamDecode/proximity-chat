@@ -8,7 +8,7 @@ const config = {
   // Worker settings
   worker: {
     rtcMinPort: 10000,
-    rtcMaxPort: 10100,
+    rtcMaxPort: 11000,
     logLevel: 'debug',
     logTags: [
       'info',
