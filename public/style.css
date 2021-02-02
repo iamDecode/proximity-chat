@@ -13,9 +13,7 @@ html, body {
 }
 
 #viewport #background {
-  width: 3200px;
-  height: 1800px;
-  background: url('/public/assets/room.png');
+  background: url('/public/room/room.png');
   -webkit-backface-visibility: hidden;
   backface-visibility: hidden;
 }
