@@ -1,5 +1,21 @@
 'use strict';
 
+// Calculate a starting position. Spread out players so joining players don't
+// all start out overlapping each other.
+function calculateStartPosition(nUsers) {
+  // Approximate radius of player bubble plus some spacing.
+  const spreadOutDistance = 150;
+
+  // Distribute players as follows:
+  const offsetX = nUsers % 2 == 1; // 2nd and 4th player are offset right.
+  const offsetY = nUsers % 4 >= 2; // 3rd and 4th player are offset down.
+
+  return {
+    x: 100 + offsetX * spreadOutDistance,
+    y: 100 + offsetY * spreadOutDistance,
+  };
+}
+
 class ProximityChatService {
   constructor(usocket) {
     // track which users are connected
@@ -18,13 +34,13 @@ class ProximityChatService {
 
     if (components[0] == 'connect') {
       const id = ws.id;
-      const pos = {x: 100, y: 100};
+      const pos = calculateStartPosition(Object.keys(this.users).length);
       const name = components[1];
 
       console.log('user connected', id);
 
       // Tell user his or her id
-      ws.send(JSON.stringify({'id': id}));
+      ws.send(JSON.stringify({'id': id, 'pos': pos}));
 
       // Tell the other users to connect to this user
       this.usocket.publish('join', JSON.stringify({join: {id: id, name: name, pos: pos}}));
