@@ -10,6 +10,8 @@
     <script src="/public/vendor/mediasoup.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/stats-js@1.0.1/build/stats.min.js"></script>
     <script src="/public/vendor/panzoom.min.js"></script>
+
+    <script src="/public/room/config.js"></script>
   </head>
   <body>
     <div id="viewport">
@@ -82,6 +84,11 @@
       </div>
     </div>
     
+    <script>
+      const el = document.getElementById("background");
+      el.style.width = `${document.ROOM_CONFIG.width}px`;
+      el.style.height = `${document.ROOM_CONFIG.height}px`;
+    </script>
     <link rel="preconnect" href="https://fonts.gstatic.com">
     <link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@400;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">

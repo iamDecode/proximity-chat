@@ -1,5 +1,7 @@
 'use strict';
 
+const {ROOM_CONFIG} = require('./public/room/config');
+
 // Calculate a starting position. Spread out players so joining players don't
 // all start out overlapping each other.
 function calculateStartPosition(nUsers) {
@@ -11,8 +13,8 @@ function calculateStartPosition(nUsers) {
   const offsetY = nUsers % 4 >= 2; // 3rd and 4th player are offset down.
 
   return {
-    x: 100 + offsetX * spreadOutDistance,
-    y: 100 + offsetY * spreadOutDistance,
+    x: ROOM_CONFIG.starting_position.x + offsetX * spreadOutDistance,
+    y: ROOM_CONFIG.starting_position.y + offsetY * spreadOutDistance,
   };
 }
 
