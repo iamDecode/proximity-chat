@@ -73,9 +73,9 @@ requestAnimationFrame(measureFps);
 const $bg = document.querySelector('#background');
 const pz = panzoom($bg, {
   maxZoom: 5,
-  minZoom: Math.max((window.innerWidth / 3200), (window.innerHeight / 1800)),
-  initialX: 100,
-  initialY: 100,
+  minZoom: Math.max(
+      (window.innerWidth / document.ROOM_CONFIG.width),
+      (window.innerHeight / document.ROOM_CONFIG.height)),
   zoomSpeed: 0.25,
   bounds: true,
   boundsPadding: 1,
@@ -87,7 +87,9 @@ pz.on('panstart', (_) => {
   pz.setMaxZoom(scale);
 });
 pz.on('panend', (_) => {
-  pz.setMinZoom(Math.max((window.innerWidth / 3200), (window.innerHeight / 1800)));
+  pz.setMinZoom(Math.max(
+      (window.innerWidth / document.ROOM_CONFIG.width),
+      (window.innerHeight / document.ROOM_CONFIG.height)));
   pz.setMaxZoom(5);
 });
 

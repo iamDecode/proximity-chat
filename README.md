@@ -5,6 +5,9 @@ Video chat system with audio volume dependent on your proximity to others. This 
 ## Details
 The project uses [peer.js](http://peerjs.com) for WebRTC audio and video sharing. The peer.js server is used for negotiation only, after which audio and video is sent between clients directly. [pixi.js](http://pixijs.io) is used to render the interface with WebGL 2 for performance that will scale for many users, and [pixi-viewport](https://github.com/davidfig/pixi-viewport) used for panning and zooming around the map. Finally, a second [uWebsockets.js](https://github.com/uNetworking/uWebSockets.js) server ensures position broadcasting with the least possible latency.
 
+## Customizing the room
+The directory `public/room` contains a room config file and a background image.
+
 ## SSL
 Proximity Chat can run in SSL mode and non-SSL mode. However, non-SSL mode is mostly intended for setups where Proximity Chat runs behind a (reverse) proxy server terminates the SSL connection:
 
@@ -35,7 +38,9 @@ Proximity Chat can run in a Docker container. There are two images: a production
 Use the following steps to build and run the testing variant:
 
     docker build -f Dockerfile_ssl -t proximity-chat-ssl .
-    docker run -d -p 3000:3000 -p 9001:9001 proximity-chat-ssl
+    docker run -d -p 3000:3000 -p 9001:9001 -v "/$(pwd)\public":/usr/src/app/public:ro proximity-chat-ssl
+
+This also binds your local `public` directory to the container, so that you can test frontend changes more quickly.
 
 Find the IP address of the virtual machine that runs this using `docker-machine ip`. You may want to enable port forwarding from your machine's network IP to the VM's IP, so you can access the VM from other devices in your network.
 
