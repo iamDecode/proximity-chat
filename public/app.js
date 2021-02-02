@@ -673,7 +673,7 @@ function initSocket() {
       }
 
       const name = localStorage.getItem('name');
-      selfPlayer = new SelfPlayer(data.id, name, {x: 100, y: 100});
+      selfPlayer = new SelfPlayer(data.id, name, data.pos);
       selfPlayer.stream = stream;
       selfPlayer.audioEnabled = stream.getAudioTracks()[0] != null;
       selfPlayer.videoEnabled = stream.getVideoTracks()[0] != null;
