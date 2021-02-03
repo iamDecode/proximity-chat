@@ -178,7 +178,10 @@ class MediasoupService {
       console.log('user', ws.id, 'pauses', userId);
       for (const key in consumers) {
         if (consumers.hasOwnProperty(key)) {
-          consumers[key].pause();
+          try {
+            consumers[key].pause();
+          } catch (e) {
+          }
         }
       }
 
@@ -192,7 +195,10 @@ class MediasoupService {
       console.log('user', ws.id, 'resumes', userId);
       for (const key in consumers) {
         if (consumers.hasOwnProperty(key)) {
-          consumers[key].resume();
+          try {
+            consumers[key].resume();
+          } catch (e) {
+          }
         }
       }
 
@@ -205,18 +211,31 @@ class MediasoupService {
 
     for (const key in user.producer) {
       if (user.producer.hasOwnProperty(key)) {
-        user.producer[key].close();
+        try {
+          user.producer[key].close();
+        } catch (e) {
+          // closing can sometimes fail if the producer has already closed by itself.
+        }
       }
     }
 
-    user.consumer.transport.close();
+    try {
+      user.consumer.transport.close();
+    } catch (e) {
+      // closing can sometimes fail if the consumer has already closed by itself.
+    }
+
     delete user.consumer.transport;
 
     for (const key in user.consumer) {
       if (user.consumer.hasOwnProperty(key)) {
         for (const kind in user.consumer[key]) {
           if (user.consumer[key].hasOwnProperty(kind)) {
-            user.consumer[key][kind].close();
+            try {
+              user.consumer[key][kind].close();
+            } catch (e) {
+              // closing can sometimes fail if the consumer has already closed by itself.
+            }
           }
         }
       }
@@ -295,11 +314,14 @@ class MediasoupService {
       return;
     }
 
-    if (consumer.type === 'simulcast') {
-      await consumer.setPreferredLayers({spatialLayer: 2, temporalLayer: 2});
-    }
+    try {
+      if (consumer.type === 'simulcast') {
+        await consumer.setPreferredLayers({spatialLayer: 2, temporalLayer: 2});
+      }
 
-    consumer.resume();
+      consumer.resume();
+    } catch (e) {
+    }
 
     return [consumer, {
       producerId: producer.id,
