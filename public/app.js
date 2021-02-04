@@ -72,26 +72,36 @@ requestAnimationFrame(measureFps);
 
 const $bg = document.querySelector('#background');
 const pz = panzoom($bg, {
-  maxZoom: 5,
-  minZoom: Math.max(
-      (window.innerWidth / document.ROOM_CONFIG.width),
-      (window.innerHeight / document.ROOM_CONFIG.height)),
   zoomSpeed: 0.25,
   bounds: true,
   boundsPadding: 1,
 });
 
+function setDefaultZoomParams() {
+  pz.setMinZoom(Math.max(
+      (window.innerWidth / document.ROOM_CONFIG.width),
+      (window.innerHeight / document.ROOM_CONFIG.height)));
+  pz.setMaxZoom(5);
+
+  if (pz.getTransform().scale < pz.getMinZoom()) {
+    // Zoom in towards the middle of what's currently visible. That doesn't
+    // guarantee that the room now fills the whole viewport, call moveBy to make
+    // panzoom fix that.
+    pz.zoomAbs(0.5, 0.5, pz.getMinZoom());
+    pz.moveBy(0, 0);
+  }
+}
+
+setDefaultZoomParams();
+window.addEventListener('resize', setDefaultZoomParams);
+
+// Disable zoom during pan.
 pz.on('panstart', (_) => {
   const scale = pz.getTransform().scale;
   pz.setMinZoom(scale);
   pz.setMaxZoom(scale);
 });
-pz.on('panend', (_) => {
-  pz.setMinZoom(Math.max(
-      (window.innerWidth / document.ROOM_CONFIG.width),
-      (window.innerHeight / document.ROOM_CONFIG.height)));
-  pz.setMaxZoom(5);
-});
+pz.on('panend', setDefaultZoomParams);
 
 
 class Player {
