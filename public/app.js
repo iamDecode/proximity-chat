@@ -70,6 +70,7 @@ const measureFps = () => {
 requestAnimationFrame(measureFps);
 
 
+const $viewport = document.querySelector('#viewport');
 const $bg = document.querySelector('#background');
 const pz = panzoom($bg, {
   zoomSpeed: 0.25,
@@ -94,6 +95,15 @@ function setDefaultZoomParams() {
 
 setDefaultZoomParams();
 window.addEventListener('resize', setDefaultZoomParams);
+
+// Center the room's starting position. Panzoom will clip this so we don't pan
+// out of the room.
+pz.moveTo(
+  // These are the coordinates of the background within the viewport, so the
+  // coordinate (-100, -100) means the leftmost and topmost 100 pixels of the
+  // background image are outside of the viewport.
+  0.5*$viewport.offsetWidth - document.ROOM_CONFIG.starting_position.x,
+  0.5*$viewport.offsetHeight - document.ROOM_CONFIG.starting_position.y);
 
 // Disable zoom during pan.
 pz.on('panstart', (_) => {
@@ -857,13 +867,9 @@ document.onkeydown = function(e) {
   e = e || window.event;
   const code = e.which || e.keyCode;
 
-  if (!(e.ctrlKey || e.metaKey)) return;
-
-  if (code == 187 || code == 189) {
+  if ((e.ctrlKey || e.metaKey) && (code == 187 || code == 189)) {
     e.preventDefault();
     e.stopPropagation();
-    const amount = (code == 189) ? -0.2 : 0.2;
-    viewport.zoomPercent(amount, true);
   }
 };
 
