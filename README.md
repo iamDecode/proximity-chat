@@ -32,6 +32,8 @@ Or to wherever the key files are located on your production server.
 ## Running
 Install dependencies with `yarn install` and run with `yarn start`. Open `https://127.0.0.1:3000`, `https://yourexternalip:3000`, or `https://yourlanip:3000` in a supporting browser on multiple devices. 
 
+For running in production, make sure to set the `ANNOUNCED_IP` environmental variable to the external IP of your server.
+
 ## Docker image
 Proximity Chat can run in a Docker container. There are two images: a production variant using non-SSL mode (see [#ssl]), and a testing variant that generates and embeds a self-signed certificate.
 
