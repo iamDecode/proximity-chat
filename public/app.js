@@ -51,23 +51,12 @@ if (localStorage.getItem('name') == null) {
   initSocket();
 }
 
-const stats = new Stats();
-document.body.appendChild(stats.dom);
-
-
 const performAnimation = () => {
   if (selfPlayer != null) selfPlayer.render();
   Object.values(players).forEach((p) => p.render());
 };
 
 setInterval(performAnimation, 1000/10);
-
-const measureFps = () => {
-  stats.end();
-  requestAnimationFrame(measureFps);
-  stats.begin();
-};
-requestAnimationFrame(measureFps);
 
 
 const $viewport = document.querySelector('#viewport');
