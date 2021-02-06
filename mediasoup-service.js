@@ -50,7 +50,7 @@ const config = {
     listenIps: [
       {
         ip: '0.0.0.0',
-        announcedIp: '127.0.0.1', // replace by public IP address
+        announcedIp: process.env.ANNOUNCED_IP || '127.0.0.1', // replace by public IP address
       },
     ],
     maxIncomingBitrate: 1500000,
