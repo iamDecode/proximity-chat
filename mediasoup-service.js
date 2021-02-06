@@ -138,11 +138,16 @@ class MediasoupService {
     if (components[0] == 'produce') {
       const args = data.substr(components[0].length + components[1].length + 2);
       const {kind, rtpParameters} = JSON.parse(args);
-      const producer = await this.users.get(ws.id).producer.transport.produce({kind, rtpParameters});
       const user = this.users.get(ws.id);
-      user.producer[kind] = producer;
-      this.users.set(ws.id, user);
-      ws.send(String(['ACK', requestId, producer.id]));
+
+      if (user != null) {
+        const producer = await user.producer.transport.produce({kind, rtpParameters});
+        user.producer[kind] = producer;
+        this.users.set(ws.id, user);
+        ws.send(String(['ACK', requestId, producer.id]));
+      }
+
+      ws.send(String(['ACK', requestId, null]));
       return;
     }
 
@@ -150,37 +155,47 @@ class MediasoupService {
       const args = data.substr(components[0].length + components[1].length + 2);
       const {rtpCapabilities, producerKind, userId} = JSON.parse(args);
       const user = this.users.get(userId);
-      const producer = user.producer[producerKind];
 
-      if (producer != null) {
-        const user = this.users.get(ws.id);
-        const [consumer, params] = await this.createConsumer(producer, user.consumer.transport, rtpCapabilities);
+      if (user != null) {
+        const producer = user.producer[producerKind];
 
-        if (user.consumer[userId] == null) {
-          user.consumer[userId] = {[producerKind]: consumer};
-        } else {
-          user.consumer[userId][producerKind] = consumer;
+        if (producer != null) {
+          const user = this.users.get(ws.id);
+          const [consumer, params] = await this.createConsumer(producer, user.consumer.transport, rtpCapabilities);
+
+          if (consumer != null) {
+            if (user.consumer[userId] == null) {
+              user.consumer[userId] = {[producerKind]: consumer};
+            } else {
+              user.consumer[userId][producerKind] = consumer;
+            }
+
+            this.users.set(ws.id, user);
+            ws.send(String(['ACK', requestId, JSON.stringify(params)]));
+            return;
+          }
         }
-
-        this.users.set(ws.id, user);
-        ws.send(String(['ACK', requestId, JSON.stringify(params)]));
-      } else {
-        ws.send(String(['ACK', requestId, null]));
       }
 
+      ws.send(String(['ACK', requestId, null]));
       return;
     }
 
     if (components[0] == 'pause') {
       const userId = data.substr(components[0].length + components[1].length + 2);
-      const consumers = this.users.get(ws.id).consumer[userId];
+      const user = this.users.get(ws.id);
 
-      console.log('user', ws.id, 'pauses', userId);
-      for (const key in consumers) {
-        if (consumers.hasOwnProperty(key)) {
-          try {
-            consumers[key].pause();
-          } catch (e) {
+      if (user != null) {
+        const consumers = user.consumer[userId];
+
+        if (consumers != null) {
+          for (const key in consumers) {
+            if (consumers.hasOwnProperty(key) && consumers[key] != null) {
+              try {
+                consumers[key].pause();
+              } catch (e) {
+              }
+            }
           }
         }
       }
@@ -190,14 +205,19 @@ class MediasoupService {
 
     if (components[0] == 'resume') {
       const userId = data.substr(components[0].length + components[1].length + 2);
-      const consumers = this.users.get(ws.id).consumer[userId];
+      const user = this.users.get(ws.id);
 
-      console.log('user', ws.id, 'resumes', userId);
-      for (const key in consumers) {
-        if (consumers.hasOwnProperty(key)) {
-          try {
-            consumers[key].resume();
-          } catch (e) {
+      if (user != null) {
+        const consumers = user.consumer[userId];
+
+        if (consumers != null) {
+          for (const key in consumers) {
+            if (consumers.hasOwnProperty(key) && consumers[key] != null) {
+              try {
+                consumers[key].resume();
+              } catch (e) {
+              }
+            }
           }
         }
       }
@@ -300,7 +320,7 @@ class MediasoupService {
         })
     ) {
       console.error('can not consume');
-      return;
+      return [null, null];
     }
     let consumer;
     try {
@@ -311,7 +331,7 @@ class MediasoupService {
       });
     } catch (error) {
       console.error('consume failed', error);
-      return;
+      return [null, null];
     }
 
     try {
@@ -320,7 +340,9 @@ class MediasoupService {
       }
 
       consumer.resume();
-    } catch (e) {
+    } catch (error) {
+      console.error('consume setup failed', error);
+      return [null, null];
     }
 
     return [consumer, {
