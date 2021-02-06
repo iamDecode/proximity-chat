@@ -542,7 +542,12 @@ async function initProducerTransport() {
         kind,
         rtpParameters,
       }));
-      callback({id});
+
+      if (id != '') {
+        callback({id});
+      } else {
+        errback();
+      }
     } catch (e) {
       errback(e);
     }
