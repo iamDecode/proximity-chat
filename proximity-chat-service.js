@@ -76,19 +76,16 @@ class ProximityChatService {
       return;
     }
 
-    const id = components[0]; // FIXME: we can use ws.id now, this can be removed
-    const user = this.users[id];
-
+    const user = this.users[ws.id];
     if (user == null) {
       return;
     }
 
-    // Update
-    if (components[1] == 'update') {
-      user.name = components[2];
-      user.audioEnabled = components[3] === 'true';
-      user.videoEnabled = components[4] === 'true';
-      user.broadcast = components[5] === 'true';
+    if (components[0] == 'update') {
+      user.name = components[1];
+      user.audioEnabled = components[2] === 'true';
+      user.videoEnabled = components[3] === 'true';
+      user.broadcast = components[4] === 'true';
       this.usocket.publish('update', JSON.stringify({
         update: {
           id: user.id,
@@ -101,14 +98,17 @@ class ProximityChatService {
       return;
     }
 
-    // Position
-    user.pos.x = parseInt(components[1]);
-    user.pos.y = parseInt(components[2]);
-    user.emitPos(user.pos.x, user.pos.y);
+    if (components[0] == 'pos') {
+      user.pos.x = parseInt(components[1]);
+      user.pos.y = parseInt(components[2]);
+      user.emitPos(user.pos.x, user.pos.y);
+    }
+
+    // Else: probably something for mediasoup service.
   }
 
   async close(ws, code, message) {
-    const user = Object.values(this.users).find((u) => u.ws === ws);
+    const user = this.users[ws.id];
 
     if (user != null) {
       console.log('user disconnected', user.id);
