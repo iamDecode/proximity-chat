@@ -88,11 +88,11 @@ window.addEventListener('resize', setDefaultZoomParams);
 // Center the room's starting position. Panzoom will clip this so we don't pan
 // out of the room.
 pz.moveTo(
-  // These are the coordinates of the background within the viewport, so the
-  // coordinate (-100, -100) means the leftmost and topmost 100 pixels of the
-  // background image are outside of the viewport.
-  0.5*$viewport.offsetWidth - document.ROOM_CONFIG.starting_position.x,
-  0.5*$viewport.offsetHeight - document.ROOM_CONFIG.starting_position.y);
+    // These are the coordinates of the background within the viewport, so the
+    // coordinate (-100, -100) means the leftmost and topmost 100 pixels of the
+    // background image are outside of the viewport.
+    0.5*$viewport.offsetWidth - document.ROOM_CONFIG.starting_position.x,
+    0.5*$viewport.offsetHeight - document.ROOM_CONFIG.starting_position.y);
 
 // Disable zoom during pan.
 pz.on('panstart', (_) => {
@@ -797,12 +797,32 @@ async function initMediasoup() {
     if (video != null) {
       const params = {track: video};
 
+      // If VP9 is the only available video codec then use SVC.
+        const videoCodecs = device
+          .rtpCapabilities
+          .codecs
+          .filter((c) => c.kind === 'video');
+
+      // SVC
+      if (videoCodecs.map(x => x.mimeType.toLowerCase()).includes("video/vp9")) {
+        console.log("Using SVC")
+        params.encodings = [
+          { scalabilityMode: 'S3T3_KEY' }
+        ]
+        params.codec = device.rtpCapabilities.codecs
+          .find((c) => c.mimeType.toLowerCase() === 'video/vp9');
+      } 
+
       // Simulcast
-      params.encodings = [
-        {rid: 'r0', maxBitrate: 100000, scalabilityMode: 'S1T3'},
-        {rid: 'r1', maxBitrate: 300000, scalabilityMode: 'S1T3'},
-        {rid: 'r2', maxBitrate: 900000, scalabilityMode: 'S1T3'},
-      ];
+      else {
+        console.log("Using Simulcast")
+        params.encodings = [
+          {scaleResolutionDownBy: 2, maxBitrate: 100000},
+          {maxBitrate: 300000},
+          {maxBitrate: 900000},
+        ];
+      }
+      
       params.codecOptions = {
         videoGoogleStartBitrate: 1000,
       };
