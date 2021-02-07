@@ -297,10 +297,6 @@ class SelfPlayer extends Player {
 
     this.interactive = true;
     this.buttonMode = true;
-
-    this.sendPos = (id, x, y) => { // TODO: reintroduce throttle
-      socket.send([id, Math.round(x), Math.round(y)]);
-    };
   }
 
   initElement() {
@@ -400,8 +396,10 @@ class SelfPlayer extends Player {
     this.$elem.style.setProperty('--translate-x', `${x}px`);
     this.$elem.style.setProperty('--translate-y', `${y}px`);
 
-    this.sendPos(this.id, this.x, this.y);
+    // TODO: reintroduce throttle
+    socket.send(['pos', Math.round(this.x), Math.round(this.y)]);
 
+    // Refresh other players' positions to trigger size/volume updates etc.
     Object.values(players).forEach((player) => {
       player.setPosition(player.x, player.y);
     });
@@ -428,8 +426,7 @@ class SelfPlayer extends Player {
   }
 
   sync() {
-    socket.send(
-        [this.id, 'update', this.name, this.audioEnabled, this.videoEnabled, this.broadcast]);
+    socket.send(['update', this.name, this.audioEnabled, this.videoEnabled, this.broadcast]);
   }
 }
 
