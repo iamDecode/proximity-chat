@@ -1,6 +1,8 @@
 name: Lint
 
-on: push
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
 
 jobs:
   run-linters:
@@ -10,6 +12,9 @@ jobs:
     steps:
       - name: Check out Git repository
         uses: actions/checkout@v2
+        with:
+          # Commitlint fails if more commits than this are pushed at once.
+          fetch-depth: 10
 
       - name: Set up Node.js
         uses: actions/setup-node@v1
