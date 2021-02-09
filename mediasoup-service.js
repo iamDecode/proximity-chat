@@ -161,7 +161,8 @@ class MediasoupService {
 
         if (producer != null) {
           const user = this.users.get(ws.id);
-          const [consumer, params] = await this.createConsumer(producer, user.consumer.transport, rtpCapabilities);
+          const [consumer, params] =
+              await this.createConsumer(producer, user.consumer.transport, rtpCapabilities);
 
           if (consumer != null) {
             if (user.consumer[userId] == null) {

@@ -88,11 +88,11 @@ window.addEventListener('resize', setDefaultZoomParams);
 // Center the room's starting position. Panzoom will clip this so we don't pan
 // out of the room.
 pz.moveTo(
-  // These are the coordinates of the background within the viewport, so the
-  // coordinate (-100, -100) means the leftmost and topmost 100 pixels of the
-  // background image are outside of the viewport.
-  0.5*$viewport.offsetWidth - document.ROOM_CONFIG.starting_position.x,
-  0.5*$viewport.offsetHeight - document.ROOM_CONFIG.starting_position.y);
+    // These are the coordinates of the background within the viewport, so the
+    // coordinate (-100, -100) means the leftmost and topmost 100 pixels of the
+    // background image are outside of the viewport.
+    0.5*$viewport.offsetWidth - document.ROOM_CONFIG.starting_position.x,
+    0.5*$viewport.offsetHeight - document.ROOM_CONFIG.starting_position.y);
 
 // Disable zoom during pan.
 pz.on('panstart', (_) => {
@@ -401,7 +401,8 @@ class SelfPlayer extends Player {
   }
 
   sync() {
-    socket.send([this.id, 'update', this.name, this.audioEnabled, this.videoEnabled, this.broadcast]);
+    socket.send(
+        [this.id, 'update', this.name, this.audioEnabled, this.videoEnabled, this.broadcast]);
   }
 }
 
@@ -495,7 +496,8 @@ async function startCall(target) {
 
     player.stream = stream;
     await playStream(stream, target);
-    player.setPosition(player.x, player.y); // To ensure volume relative to position is set correctly
+    // To ensure volume relative to position is set correctly.
+    player.setPosition(player.x, player.y);
     console.log('created stream for', target);
   }
 }
@@ -653,7 +655,8 @@ async function getStream(constraints, isWebcam) {
     const stream = await navigator.mediaDevices.getUserMedia(constraints);
     return stream;
   } catch (err) {
-    if ('video' in constraints && ['NotAllowedError', 'OverconstrainedError', 'NotFoundError'].includes(err.name)) {
+    if ('video' in constraints &&
+    ['NotAllowedError', 'OverconstrainedError', 'NotFoundError'].includes(err.name)) {
       delete constraints.video;
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
       return stream;
@@ -904,7 +907,8 @@ function gotDevices(deviceInfos) {
     }
   }
   selectors.forEach((select, selectorIndex) => {
-    if (Array.prototype.slice.call(select.childNodes).some((n) => n.value === values[selectorIndex])) {
+    if (Array.prototype.slice.call(select.childNodes)
+        .some((n) => n.value === values[selectorIndex])) {
       select.value = values[selectorIndex];
     }
   });
