@@ -1,10 +1,10 @@
-FROM node:10
+FROM node:14
 
 WORKDIR /usr/src/app
 
 COPY package.json ./
 COPY yarn.lock ./
-RUN yarn install
+RUN yarn install --prod --immutable
 
 COPY *.js ./
 COPY public public/
