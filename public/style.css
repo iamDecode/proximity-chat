@@ -172,6 +172,52 @@ html, body {
   display: none;
 }
 
+.player .glass {
+  --progress: 1;
+  position: absolute;
+  width: 40px;
+  height: 50px;
+  top: 72px;
+  left: -18px;
+  z-index: 10;
+  opacity: 0;
+}
+
+.player .glass .drink {
+  background-size: 40px 50px; 
+  background-position: center bottom;
+  position: absolute;
+  width: 40px;
+  bottom: 0px;
+  transition: height 1s cubic-bezier(0.32, 0.85, 0.25, 0.99);
+}
+
+.glass.beer {
+  background-image: url(/public/assets/beer_glass.svg);
+  background-size: 100% 100%;
+  opacity: 1;
+}
+
+.glass.beer .drink {
+  background-image: url(/public/assets/beer_drink.svg);
+  height: calc(var(--progress) * 50px);
+}
+
+.glass.wine {
+  background-image: url(/public/assets/wine_glass.svg);
+  background-size: 100% 100%;
+  opacity: 1;
+}
+.glass.wine .drink {
+  background-image: url(/public/assets/wine_drink1.svg);
+  background-position: center calc(100% - 27px);
+  bottom: 20px;
+  height: calc(var(--progress) * 20px);
+}
+
+.glass.wine.red .drink {
+  background-image: url(/public/assets/wine_drink2.svg);
+}
 
 nav {
   position: absolute;

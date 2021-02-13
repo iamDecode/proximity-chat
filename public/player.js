@@ -49,6 +49,13 @@ export class Player {
     $icon.classList.add('icon');
     $elem.appendChild($icon);
 
+    const $glass = document.createElement('div');
+    $glass.classList.add('glass');
+    const $drink = document.createElement('div');
+    $drink.classList.add('drink');
+    $glass.appendChild($drink);
+    $elem.appendChild($glass);
+
     document.querySelector('#background').appendChild($elem);
 
     this.$elem = $elem;
