@@ -18,10 +18,7 @@ To run in SSL mode, set the `SSL_CERT_PATH` and `SSL_KEY_PATH` environment varia
 
 For local development you need to generate a self-signed certificate as voice media can only be requested (`MediaDevices.getUserMedia()`) over secure connections:
 
-    openssl genrsa -out key.pem
-    openssl req -new -key key.pem -out csr.pem
-    openssl x509 -req -days 9999 -in csr.pem -signkey key.pem -out cert.pem
-    rm csr.pem
+    yarn gen-ssl-certs
 
 With those files, you can run the server using:
 
@@ -35,14 +32,14 @@ Install dependencies with `yarn install` and run with `yarn start`. Open `https:
 For running in production, make sure to set the `ANNOUNCED_IP` environmental variable to the external IP of your server.
 
 ## Docker image
-Proximity Chat can run in a Docker container. There are two images: a production variant using non-SSL mode (see [#ssl]), and a testing variant that generates and embeds a self-signed certificate.
+Proximity Chat can run in a Docker container. Use the following steps to build and run using Docker:
 
-Use the following steps to build and run the testing variant:
-
-    docker build -f Dockerfile_ssl -t proximity-chat-ssl .
-    docker run -d -p 3000:3000 -p 9001:9001 -v "/$(pwd)\public":/usr/src/app/public:ro proximity-chat-ssl
+    docker build -t proximity-chat .
+    docker run -d -p 3000:3000 -p 9001:9001 -v "/$(pwd)\public":/usr/src/app/public:ro -e SSL_CERT_PATH="./cert.pem" -e SSL_KEY_PATH="./key.pem" proximity-chat
 
 This also binds your local `public` directory to the container, so that you can test frontend changes more quickly.
+
+If you don't already have `cert.pem` and `key.pem` files, run `yarn gen-ssl-certs` before running these commands. If the certificates you're using are not embedded into the image, make them available to the Docker machine using a volume (similar to the given `-v` flag) and pass the appropriate values for `SSL_CERT_PATH` and `SSL_KEY_PATH`.
 
 Find the IP address of the virtual machine that runs this using `docker-machine ip`. You may want to enable port forwarding from your machine's network IP to the VM's IP, so you can access the VM from other devices in your network.
 
