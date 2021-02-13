@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node main.js",
     "lint": "eslint .",
-    "lint-fix": "eslint . --fix"
+    "lint-fix": "eslint . --fix",
+    "gen-ssl-certs": "openssl req -new -newkey rsa:2048 -nodes -keyout key.pem -x509 -out cert.pem -days 365 -subj /C=NL/ST=NB/L=Eindhoven/O=Disc/CN=www.demos.nl"
   },
   "author": "Meshiest",
   "license": "CC0 1.0 Universal",
