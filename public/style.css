@@ -24,7 +24,6 @@ html, body {
   --scale: 1;
   --translate-x: 0px;
   --translate-y: 0px;
-  --volume: 1;
   position: absolute;
   width: 125px;
   height: 125px;
@@ -59,9 +58,11 @@ html, body {
   background: var(--color);
   border-radius: 100%;
   border: 2px solid white;
+  pointer-events: none;
 }
 
-.player::before {
+.player .audioRing {
+  --volume: 1;
   content: '';
   display: block;
   position: absolute;
@@ -89,6 +90,7 @@ html, body {
   border: 2px solid white;
   opacity: 0;
   will-change: opacity;
+  pointer-events: none;
 }
 
 .player.video-enabled video {
@@ -104,6 +106,7 @@ html, body {
   left: 90px;
   z-index: 10;
   border-radius: 100%;
+  pointer-events: none;
 }
 
 .player .icon::after {
@@ -142,6 +145,21 @@ html, body {
 }
 .player:not(.audio-enabled) .icon::after {
   content: 'mic_off';
+}
+
+.player .tooltip {
+  margin-top: 100%;
+  left: 50%;
+  transform: translate(-50%, 0);
+}
+
+.player:hover .tooltip {
+  opacity: .9;
+}
+
+.player .tooltip .tooltip-arrow {
+  left: 50%;
+  transform: translate(-50%, 0);
 }
 
 nav {
