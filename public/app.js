@@ -107,7 +107,7 @@ class Player {
   constructor(id, name, pos) {
     this.color = colorFor(name);
 
-    this.initElement();
+    this.initElement(name);
 
     this.id = id;
     this.name = name;
@@ -120,12 +120,16 @@ class Player {
     this._videoEnabled = false;
   }
 
-  initElement() {
+  initElement(name) {
     const $elem = document.createElement('div');
     $elem.classList.add('player');
     $elem.classList.add('audio-enabled');
     $elem.style.setProperty('--color', `#${this.color.toString(16)}`);
     $elem.style.setProperty('--color-light', `#${lighten(this.color, 60).toString(16)}`);
+
+    const $audioRing = document.createElement('div');
+    $audioRing.classList.add('audioRing');
+    $elem.appendChild($audioRing);
 
     const $avatar = document.createElement('div');
     $avatar.classList.add('avatar');
@@ -134,6 +138,19 @@ class Player {
     const $icon = document.createElement('div');
     $icon.classList.add('icon');
     $elem.appendChild($icon);
+
+    if (!(this instanceof SelfPlayer)) {
+      const $tooltip = document.createElement('div');
+      $tooltip.classList.add('tooltip', 'fade', 'bs-tooltip-bottom');
+      const $tooltipArrow = document.createElement('div');
+      $tooltipArrow.classList.add('tooltip-arrow');
+      $tooltip.appendChild($tooltipArrow);
+      const $tooltipInner = document.createElement('div');
+      $tooltipInner.classList.add('tooltip-inner');
+      $tooltipInner.innerText = name;
+      $tooltip.appendChild($tooltipInner);
+      $elem.appendChild($tooltip);
+    }
 
     $bg.appendChild($elem);
 
@@ -238,7 +255,7 @@ class Player {
     const bottomCutoff = 0.4;
     const scale = Math.max(0, ((Math.max(...data) / 255) - bottomCutoff) / (1 - bottomCutoff));
     const width = (scale * 0.2) + 1;
-    this.$elem.style.setProperty('--volume', width);
+    this.$elem.querySelector('.audioRing').style.setProperty('--volume', width);
   }
 
   render() {
