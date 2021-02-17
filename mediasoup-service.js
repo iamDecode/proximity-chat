@@ -191,7 +191,11 @@ class MediasoupService {
 
         if (consumers != null) {
           for (const key in consumers) {
-            if (consumers.hasOwnProperty(key) && consumers[key] != null) {
+            if (
+              consumers.hasOwnProperty(key) &&
+              consumers[key] != null &&
+              consumers[key].closed === false
+            ) {
               try {
                 consumers[key].pause();
               } catch (e) {
@@ -213,7 +217,11 @@ class MediasoupService {
 
         if (consumers != null) {
           for (const key in consumers) {
-            if (consumers.hasOwnProperty(key) && consumers[key] != null) {
+            if (
+              consumers.hasOwnProperty(key) &&
+              consumers[key] != null &&
+              consumers[key].closed === false
+            ) {
               try {
                 consumers[key].resume();
               } catch (e) {
@@ -235,31 +243,36 @@ class MediasoupService {
     }
 
     for (const key in user.producer) {
-      if (user.producer.hasOwnProperty(key)) {
+      if (
+        user.producer.hasOwnProperty(key) &&
+        user.producer[key] != null &&
+        user.producer[key].closed === false
+      ) {
         try {
           user.producer[key].close();
         } catch (e) {
-          // closing can sometimes fail if the producer has already closed by itself.
         }
       }
     }
 
-    try {
-      user.consumer.transport.close();
-    } catch (e) {
-      // closing can sometimes fail if the consumer has already closed by itself.
+    if (user.consumer.transport != null && user.consumer.transport.closed === false) {
+      try {
+        user.consumer.transport.close();
+      } catch (e) {
+      }
     }
-
-    delete user.consumer.transport;
 
     for (const key in user.consumer) {
       if (user.consumer.hasOwnProperty(key)) {
         for (const kind in user.consumer[key]) {
-          if (user.consumer[key].hasOwnProperty(kind)) {
+          if (
+            user.consumer[key].hasOwnProperty(kind) &&
+            user.consumer[key][kind] != null &&
+            user.consumer[key][kind].closed === false
+          ) {
             try {
               user.consumer[key][kind].close();
             } catch (e) {
-              // closing can sometimes fail if the consumer has already closed by itself.
             }
           }
         }
