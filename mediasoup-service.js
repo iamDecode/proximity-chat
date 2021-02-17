@@ -230,6 +230,10 @@ class MediasoupService {
   async close(ws, code, message) {
     const user = this.users.get(ws.id);
 
+    if (user == null) {
+      return;
+    }
+
     for (const key in user.producer) {
       if (user.producer.hasOwnProperty(key)) {
         try {
