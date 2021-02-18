@@ -147,21 +147,6 @@ html, body {
   content: 'mic_off';
 }
 
-.player .tooltip {
-  margin-top: 100%;
-  left: 50%;
-  transform: translate(-50%, 0);
-}
-
-.player:hover .tooltip {
-  opacity: .9;
-}
-
-.player .tooltip .tooltip-arrow {
-  left: 50%;
-  transform: translate(-50%, 0);
-}
-
 nav {
   position: absolute;
   bottom: 20px;
