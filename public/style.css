@@ -357,10 +357,13 @@ nav ul li button:not(.notooltip):hover::after, nav ul li button:not(.notooltip):
   font-weight: bold;
 }
 
-.seamless {
-  
+.custom-select {
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23343a40' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M2 5l6 6 6-6'/%3e%3c/svg%3e");
+  background-position: right .75rem center;
+  background-size: 16px 12px;
 }
-.seamless .form-control, .seamless .form-select {
+
+.seamless .form-control, .seamless .custom-select {
   padding-left: 48px;
   border-radius: .375rem !important;
 }
@@ -376,6 +379,10 @@ nav ul li button:not(.notooltip):hover::after, nav ul li button:not(.notooltip):
   font-size: 22px;
   line-height: 26px;
   color: #abb6bf;
+}
+
+.preferences label {
+  margin-bottom: 0px;
 }
 
 .modal-content {
