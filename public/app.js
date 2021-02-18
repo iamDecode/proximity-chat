@@ -99,8 +99,22 @@ pz.on('panstart', (_) => {
   const scale = pz.getTransform().scale;
   pz.setMinZoom(scale);
   pz.setMaxZoom(scale);
+
+  document.querySelector('button.settings').classList.remove('notooltip');
+  document.querySelector('.preferences').classList.remove('show');
 });
 pz.on('panend', setDefaultZoomParams);
+
+const updateTooltip = (_) => {
+  Object.values(players).forEach((p) => {
+    if (p.tooltip != null) {
+      p.tooltip.tooltip('update');
+      return;
+    }
+  });
+};
+pz.on('pan', updateTooltip);
+pz.on('zoom', updateTooltip);
 
 
 class Player {
@@ -124,6 +138,12 @@ class Player {
     const $elem = document.createElement('div');
     $elem.classList.add('player');
     $elem.classList.add('audio-enabled');
+
+    if (!(this instanceof SelfPlayer)) {
+      $elem.title = name;
+      this.tooltip = $($elem).tooltip({placement: 'bottom'});
+    }
+
     $elem.style.setProperty('--color', `#${this.color.toString(16)}`);
     $elem.style.setProperty('--color-light', `#${lighten(this.color, 60).toString(16)}`);
 
@@ -139,18 +159,6 @@ class Player {
     $icon.classList.add('icon');
     $elem.appendChild($icon);
 
-    if (!(this instanceof SelfPlayer)) {
-      const $tooltip = document.createElement('div');
-      $tooltip.classList.add('tooltip', 'fade', 'bs-tooltip-bottom');
-      const $tooltipArrow = document.createElement('div');
-      $tooltipArrow.classList.add('tooltip-arrow');
-      $tooltip.appendChild($tooltipArrow);
-      const $tooltipInner = document.createElement('div');
-      $tooltipInner.classList.add('tooltip-inner');
-      $tooltipInner.innerText = name;
-      $tooltip.appendChild($tooltipInner);
-      $elem.appendChild($tooltip);
-    }
 
     $bg.appendChild($elem);
 
@@ -176,6 +184,8 @@ class Player {
 
     this.$elem.style.setProperty('--translate-x', `${x}px`);
     this.$elem.style.setProperty('--translate-y', `${y}px`);
+
+    if (this.tooltip != null) this.tooltip.tooltip('update');
 
     const volume = this.calcVolume();
     if (this.$video != null) {
