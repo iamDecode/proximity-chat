@@ -280,6 +280,11 @@ class MediasoupService {
     }
 
     this.users.delete(ws.id);
+
+    // Manually remove consumers of the deleted user
+    this.users.forEach((user, _) => {
+      delete user.consumer[ws.id];
+    });
   }
 
   async runMediasoupWorker() {
