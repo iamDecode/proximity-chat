@@ -197,7 +197,7 @@ class MediasoupService {
               consumers[key].closed === false
             ) {
               try {
-                consumers[key].pause();
+                await consumers[key].pause();
               } catch (e) {
               }
             }
@@ -223,7 +223,7 @@ class MediasoupService {
               consumers[key].closed === false
             ) {
               try {
-                consumers[key].resume();
+                await consumers[key].resume();
               } catch (e) {
               }
             }
@@ -362,7 +362,7 @@ class MediasoupService {
         await consumer.setPreferredLayers({spatialLayer: 2, temporalLayer: 2});
       }
 
-      consumer.resume();
+      await consumer.resume();
     } catch (error) {
       console.error('consume setup failed', error);
       return [null, null];
