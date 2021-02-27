@@ -199,6 +199,7 @@ class MediasoupService {
               try {
                 await consumers[key].pause();
               } catch (e) {
+                console.log('pause error', e);
               }
             }
           }
@@ -225,6 +226,7 @@ class MediasoupService {
               try {
                 await consumers[key].resume();
               } catch (e) {
+                console.log('resume error', e);
               }
             }
           }
