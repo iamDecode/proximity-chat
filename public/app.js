@@ -188,6 +188,10 @@ class Player {
     if (this.tooltip != null) this.tooltip.tooltip('update');
 
     const volume = this.calcVolume();
+    this.setScale(volume);
+  }
+
+  setScale(volume, update) {
     if (this.$video != null) {
       this.$video.volume = volume;
 
@@ -196,7 +200,9 @@ class Player {
       if (this.$video.muted != !enabled) {
         this.$video.muted = !enabled;
 
-        socketSend(enabled ? 'resume' : 'pause', this.id);
+        if (update) {
+          socket.send([enabled ? 'resume' : 'pause', null, this.id]);
+        }
 
         if (this.videoEnabled) {
           this.$elem.classList.toggle('video-enabled', enabled);
@@ -399,9 +405,9 @@ class SelfPlayer extends Player {
     // TODO: reintroduce throttle
     socket.send(['pos', Math.round(this.x), Math.round(this.y)]);
 
-    // Refresh other players' positions to trigger size/volume updates etc.
     Object.values(players).forEach((player) => {
-      player.setPosition(player.x, player.y);
+      const volume = player.calcVolume();
+      player.setScale(volume, true);
     });
   }
 

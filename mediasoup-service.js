@@ -105,7 +105,6 @@ class MediasoupService {
       const {transport, params} = await this.createWebRtcTransport();
       const user = this.users.get(ws.id);
       user.producer.transport = transport;
-      this.users.set(ws.id, user);
       ws.send(String(['ACK', requestId, JSON.stringify(params)]));
       return;
     }
@@ -114,7 +113,6 @@ class MediasoupService {
       const {transport, params} = await this.createWebRtcTransport();
       const user = this.users.get(ws.id);
       user.consumer.transport = transport;
-      this.users.set(ws.id, user);
       ws.send(String(['ACK', requestId, JSON.stringify(params)]));
       return;
     }
@@ -143,7 +141,6 @@ class MediasoupService {
       if (user != null) {
         const producer = await user.producer.transport.produce({kind, rtpParameters});
         user.producer[kind] = producer;
-        this.users.set(ws.id, user);
         ws.send(String(['ACK', requestId, producer.id]));
       }
 
@@ -171,7 +168,6 @@ class MediasoupService {
               user.consumer[userId][producerKind] = consumer;
             }
 
-            this.users.set(ws.id, user);
             ws.send(String(['ACK', requestId, JSON.stringify(params)]));
             return;
           }
@@ -199,6 +195,29 @@ class MediasoupService {
               try {
                 await consumers[key].pause();
               } catch (e) {
+                console.log('pause error: ', e);
+              }
+            }
+          }
+        }
+      }
+
+      const user2 = this.users.get(userId);
+
+      if (user2 != null) {
+        const consumers = user2.consumer[ws.id];
+
+        if (consumers != null) {
+          for (const key in consumers) {
+            if (
+              consumers.hasOwnProperty(key) &&
+              consumers[key] != null &&
+              consumers[key].closed === false
+            ) {
+              try {
+                await consumers[key].pause();
+              } catch (e) {
+                console.log('pause error2: ', e);
               }
             }
           }
@@ -225,6 +244,29 @@ class MediasoupService {
               try {
                 await consumers[key].resume();
               } catch (e) {
+                console.log('resume error: ', e);
+              }
+            }
+          }
+        }
+      }
+
+      const user2 = this.users.get(userId);
+
+      if (user2 != null) {
+        const consumers = user2.consumer[ws.id];
+
+        if (consumers != null) {
+          for (const key in consumers) {
+            if (
+              consumers.hasOwnProperty(key) &&
+              consumers[key] != null &&
+              consumers[key].closed === false
+            ) {
+              try {
+                await consumers[key].resume();
+              } catch (e) {
+                console.log('resume error2: ', e);
               }
             }
           }
@@ -282,9 +324,9 @@ class MediasoupService {
     this.users.delete(ws.id);
 
     // Manually remove consumers of the deleted user
-    this.users.forEach((user, _) => {
+    for (const user of this.users.values()) {
       delete user.consumer[ws.id];
-    });
+    }
   }
 
   async runMediasoupWorker() {
