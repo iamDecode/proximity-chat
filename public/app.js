@@ -217,7 +217,7 @@ class Player {
   setBroadcast(enabled) {
     this.broadcast = enabled;
     this.$elem.classList.toggle('broadcast-enabled', enabled);
-    this.setPosition(this.x, this.y); // To update scale
+    this.setScale(this.calcVolume());
   }
 
   calcVolume() {
@@ -265,6 +265,9 @@ class Player {
   set videoEnabled(enabled) {
     this._videoEnabled = enabled;
     this.$elem.classList.toggle('video-enabled', enabled);
+    if (this.$video != null) {
+      this.$video.muted = !enabled;
+    }
   }
 
   drawAudioRing(data) {
@@ -793,6 +796,7 @@ function initSocket() {
         player.audioEnabled = data.update.audioEnabled;
         player.videoEnabled = data.update.videoEnabled;
         player.setBroadcast(data.update.broadcast);
+        player.setScale(player.calcVolume());
       }
     }
 
