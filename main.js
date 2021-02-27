@@ -73,3 +73,5 @@ socketServer.listen(9001, (token) => {
   }
 });
 httpServer.listen(3000);
+
+process.on('unhandledRejection', (r) => console.log(r));
