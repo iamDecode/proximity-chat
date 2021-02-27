@@ -797,6 +797,7 @@ function initSocket() {
 
       if (data.leave.id in players) {
         const player = players[data.leave.id];
+        player.tooltip.tooltip('dispose');
         player.$elem.remove();
         delete players[player.id];
       };
