@@ -1,4 +1,4 @@
-'use strict';
+
 
 const {ROOM_CONFIG} = require('./public/room/config');
 

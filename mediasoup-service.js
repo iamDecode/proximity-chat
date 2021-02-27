@@ -1,4 +1,4 @@
-'use strict';
+
 
 const mediasoup = require('mediasoup');
 const os = require('os');
@@ -9,7 +9,7 @@ const config = {
   worker: {
     rtcMinPort: 10000,
     rtcMaxPort: 11000,
-    logLevel: 'debug',
+    logLevel: 'warn',
     logTags: [
       'info',
       'ice',

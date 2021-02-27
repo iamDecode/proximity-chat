@@ -1,4 +1,4 @@
-'use strict';
+
 
 (function(exports) {
   exports.ROOM_CONFIG = {
