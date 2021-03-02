@@ -12,6 +12,7 @@
   "author": "Meshiest",
   "license": "CC0 1.0 Universal",
   "dependencies": {
+    "babel-eslint": "^10.1.0",
     "express": "^4.17.1",
     "mediasoup": "^3.6.31",
     "uWebSockets.js": "uNetworking/uWebSockets.js#v18.11.0",
