@@ -6,6 +6,7 @@ export class Player {
   color;
   x;
   y;
+  inRange;
   delegate = {
     calcVolume: (player) => {},
   };
@@ -85,12 +86,12 @@ export class Player {
   }
 
   setScale(volume) {
+    const enabled = volume !== 0;
+
     if (this.$video != null) {
       this.$video.volume = volume;
 
-      const enabled = volume !== 0;
-
-      if (this.$video.muted != !enabled) {
+      if (this.inRange !== enabled) {
         this.$video.muted = !enabled;
 
         if (this.videoEnabled) {
@@ -98,6 +99,8 @@ export class Player {
         }
       }
     }
+
+    this.inRange = enabled;
 
     const scalar = (volume * (1 - 0.5)) + 0.5;
     this.$elem.style.setProperty('--scale', scalar);
@@ -175,7 +178,7 @@ export class Player {
 export class SelfPlayer extends Player {
   delegate = {
     position: (x, y) => {},
-    update: (name, audio, video, broadcast) => {},
+    update: (name, audio, video, broadcast, trigger) => {},
   };
 
   initElement() {
@@ -271,11 +274,17 @@ export class SelfPlayer extends Player {
   }
   set broadcast(enabled) {
     super.broadcast = enabled;
-    this.sync();
+    this.sync(true);
   }
 
-  sync() {
-    this.delegate.update(this.name, this.audioEnabled, this.videoEnabled, this.broadcast);
+  sync(triggerPauseResume) {
+    this.delegate.update(
+        this.name,
+        this.audioEnabled,
+        this.videoEnabled,
+        this.broadcast,
+        triggerPauseResume,
+    );
   }
 
   setPosition(x, y) {

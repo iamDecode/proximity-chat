@@ -180,10 +180,10 @@ class MediasoupService {
 
     if (components[0] == 'pause') {
       const userId = data.substr(components[0].length + components[1].length + 2);
-      const user = this.users.get(ws.id);
+      const other = this.users.get(userId);
 
-      if (user != null) {
-        const consumers = user.consumer[userId];
+      if (other != null) {
+        const consumers = other.consumer[ws.id];
 
         if (consumers != null) {
           for (const key in consumers) {
@@ -202,10 +202,15 @@ class MediasoupService {
         }
       }
 
-      const user2 = this.users.get(userId);
+      const pauseBoth = components[1] === '1';
+      if (!pauseBoth) {
+        return;
+      }
 
-      if (user2 != null) {
-        const consumers = user2.consumer[ws.id];
+      const self = this.users.get(ws.id);
+
+      if (self != null) {
+        const consumers = self.consumer[userId];
 
         if (consumers != null) {
           for (const key in consumers) {
@@ -229,10 +234,10 @@ class MediasoupService {
 
     if (components[0] == 'resume') {
       const userId = data.substr(components[0].length + components[1].length + 2);
-      const user = this.users.get(ws.id);
+      const other = this.users.get(userId);
 
-      if (user != null) {
-        const consumers = user.consumer[userId];
+      if (other != null) {
+        const consumers = other.consumer[ws.id];
 
         if (consumers != null) {
           for (const key in consumers) {
@@ -251,10 +256,15 @@ class MediasoupService {
         }
       }
 
-      const user2 = this.users.get(userId);
+      const resumeBoth = components[1] === '1';
+      if (!resumeBoth) {
+        return;
+      }
 
-      if (user2 != null) {
-        const consumers = user2.consumer[ws.id];
+      const self = this.users.get(ws.id);
+
+      if (self != null) {
+        const consumers = self.consumer[userId];
 
         if (consumers != null) {
           for (const key in consumers) {

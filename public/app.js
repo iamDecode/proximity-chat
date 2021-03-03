@@ -23,7 +23,6 @@ export class App {
       });
     };
 
-
     // Start render loop for audioRing visualizations (10 fps)
     const performAnimation = () => {
       if (this.selfPlayer != null) this.selfPlayer.render();
@@ -67,19 +66,28 @@ export class App {
         this.socket.send(['pos', x, y]);
 
         for (const player of this.players.values()) {
-
           const volume = this.calcVolume(player);
 
           const enabled = volume !== 0;
-          if (player.$video.muted != !enabled) {
-            this.socket.send([enabled ? 'resume' : 'pause', null, player.id]);
+          if (player.inRange !== enabled) {
+            this.socket.send([enabled ? 'resume' : 'pause', 1, player.id]);
           }
 
           player.setScale(volume);
         }
       };
-      this.selfPlayer.delegate.update = (name, audio, video, broadcast) => {
+      this.selfPlayer.delegate.update = (name, audio, video, broadcast, triggerPauseResume) => {
         this.socket.send(['update', name, audio, video, broadcast]);
+
+        if (triggerPauseResume) {
+          for (const player of this.players.values()) {
+            if (broadcast) {
+              this.socket.send(['resume', 0, player.id]);
+            } else if (!player.inRange) {
+              this.socket.send(['pause', 0, player.id]);
+            }
+          }
+        }
       };
 
       await this.playStream(stream, this.selfPlayer);

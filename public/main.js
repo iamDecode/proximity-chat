@@ -225,7 +225,7 @@ audioInputSelect.onchange = videoSelect.onchange = (e) => {
     const videoTrack = stream.getVideoTracks()[0];
 
     app.selfPlayer.analyser = null;
-    
+
     if (e.target.id == 'videoSource') {
       app.selfPlayer.stream = stream;
       app.playStream(stream, app.selfPlayer);
