@@ -1,7 +1,7 @@
 import {MediasoupClient} from './mediasoup-client.js';
 import {Player, SelfPlayer} from './player.js';
 import {Socket} from './socket.js';
-import {attachSinkId} from './utils.js';
+import {attachSinkId, debounce} from './utils.js';
 
 
 // Config
@@ -62,6 +62,10 @@ export class App {
       this.selfPlayer.audioEnabled = stream.getAudioTracks()[0] != null;
       this.selfPlayer.videoEnabled = stream.getVideoTracks()[0] != null;
 
+      const callPauseResume = debounce((enabled, player) => {
+        this.socket.send([enabled ? 'resume' : 'pause', 1, player.id]);
+      }, 500);
+
       this.selfPlayer.delegate.position = (x, y) => {
         this.socket.send(['pos', x, y]);
 
@@ -70,7 +74,7 @@ export class App {
 
           const enabled = volume !== 0;
           if (player.inRange !== enabled) {
-            this.socket.send([enabled ? 'resume' : 'pause', 1, player.id]);
+            callPauseResume(enabled, player);
           }
 
           player.setScale(volume);

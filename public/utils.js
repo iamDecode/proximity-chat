@@ -49,3 +49,13 @@ export function attachSinkId(element, sinkId) {
     console.warn('Browser does not support output device selection.');
   }
 }
+
+// In case of quick repeated calls, postpone call until after `wait` time
+export function debounce(callback, wait) {
+  let timeout = null;
+  return (...args) => {
+    const next = () => callback(...args);
+    clearTimeout(timeout);
+    timeout = setTimeout(next, wait);
+  };
+}
