@@ -92,8 +92,6 @@ export class Player {
       this.$video.volume = volume;
 
       if (this.inRange !== enabled) {
-        this.$video.muted = !enabled;
-
         if (this.videoEnabled) {
           this.$elem.classList.toggle('video-enabled', enabled);
         }
@@ -128,9 +126,6 @@ export class Player {
   set videoEnabled(enabled) {
     this._videoEnabled = enabled;
     this.$elem.classList.toggle('video-enabled', enabled);
-    if (this.$video != null) {
-      this.$video.muted = !enabled;
-    }
   }
 
   get broadcast() {
