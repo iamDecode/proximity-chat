@@ -130,10 +130,10 @@ const playerDelegate = {
     return scale;
   },
   pause: function(id) {
-    socket.asyncSend('pause', id);
+    socket.send(['pause', null, id]);
   },
   resume: function(id) {
-    socket.asyncSend('resume', id);
+    socket.send(['resume', null, id]);
   },
   position: function(x, y) {
     socket.send(['pos', x, y]);
