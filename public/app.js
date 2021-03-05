@@ -132,6 +132,10 @@ class Player {
     this.broadcast = false;
     this._audioEnabled = true;
     this._videoEnabled = false;
+
+    if (!(this instanceof SelfPlayer)) {
+      this.inRange = this.calcVolume() !== 0;
+    }
   }
 
   initElement(name) {
@@ -188,10 +192,10 @@ class Player {
     if (this.tooltip != null) this.tooltip.tooltip('update');
 
     const volume = this.calcVolume();
+    const enabled = volume !== 0;
+
     if (this.$video != null) {
       this.$video.volume = volume;
-
-      const enabled = volume !== 0;
 
       if (this.$video.muted != !enabled) {
         this.$video.muted = !enabled;
@@ -203,6 +207,8 @@ class Player {
         }
       }
     }
+
+    this.inRange = enabled;
 
     const scalar = (volume * (1 - 0.5)) + 0.5;
     this.$elem.style.setProperty('--scale', scalar);
@@ -258,7 +264,10 @@ class Player {
   }
   set videoEnabled(enabled) {
     this._videoEnabled = enabled;
-    this.$elem.classList.toggle('video-enabled', enabled);
+
+    if (this.inRange) {
+      this.$elem.classList.toggle('video-enabled', enabled);
+    }
   }
 
   drawAudioRing(data) {
@@ -294,9 +303,7 @@ class Player {
 class SelfPlayer extends Player {
   constructor(id, name, pos) {
     super(id, name, pos);
-
-    this.interactive = true;
-    this.buttonMode = true;
+    this.inRange = true;
   }
 
   initElement() {
