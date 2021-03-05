@@ -1,5 +1,3 @@
-'use strict';
-
 (function(exports) {
   exports.ROOM_CONFIG = {
     // The size of the room background image. These must be the dimensions of
