@@ -1,4 +1,4 @@
-'use strict';
+import {Player, SelfPlayer} from './player.js';
 
 let socket;
 
@@ -66,6 +66,7 @@ const pz = panzoom($bg, {
   bounds: true,
   boundsPadding: 1,
 });
+window.pz = pz;
 
 function setDefaultZoomParams() {
   pz.setMinZoom(Math.max(
@@ -117,116 +118,23 @@ pz.on('pan', updateTooltip);
 pz.on('zoom', updateTooltip);
 
 
-class Player {
-  constructor(id, name, pos) {
-    this.color = colorFor(name);
+// Settings
+let micEnabled = true;
+let camEnabled = true;
+const SOUND_CUTOFF_RANGE = 350;
+const SOUND_NEAR_RANGE = 200;
 
-    this.initElement(name);
+let selfPlayer;
+const players = {};
 
-    this.id = id;
-    this.name = name;
-    this.x = pos.x;
-    this.y = pos.y;
-    this.$elem.style.setProperty('--translate-x', `${this.x}px`);
-    this.$elem.style.setProperty('--translate-y', `${this.y}px`);
-    this.broadcast = false;
-    this._audioEnabled = true;
-    this._videoEnabled = false;
-
-    if (!(this instanceof SelfPlayer)) {
-      this.inRange = this.calcVolume() !== 0;
-    }
-  }
-
-  initElement(name) {
-    const $elem = document.createElement('div');
-    $elem.classList.add('player');
-    $elem.classList.add('audio-enabled');
-
-    if (!(this instanceof SelfPlayer)) {
-      $elem.title = name;
-      this.tooltip = $($elem).tooltip({placement: 'bottom'});
-    }
-
-    $elem.style.setProperty('--color', `#${this.color.toString(16)}`);
-    $elem.style.setProperty('--color-light', `#${lighten(this.color, 60).toString(16)}`);
-
-    const $audioRing = document.createElement('div');
-    $audioRing.classList.add('audioRing');
-    $elem.appendChild($audioRing);
-
-    const $avatar = document.createElement('div');
-    $avatar.classList.add('avatar');
-    $elem.appendChild($avatar);
-
-    const $icon = document.createElement('div');
-    $icon.classList.add('icon');
-    $elem.appendChild($icon);
-
-
-    $bg.appendChild($elem);
-
-    this.$elem = $elem;
-  }
-
-  addVideo(element) {
-    this.$video = element;
-    this.$elem.appendChild(element);
-  }
-
-  setMic(enabled) {
-    this.stream.getAudioTracks().forEach((x) => x.enabled = enabled);
-  }
-
-  setCam(enabled) {
-    this.stream.getVideoTracks().forEach((x) => x.enabled = enabled);
-  }
-
-  setPosition(x, y) {
-    this.x = x;
-    this.y = y;
-
-    this.$elem.style.setProperty('--translate-x', `${x}px`);
-    this.$elem.style.setProperty('--translate-y', `${y}px`);
-
-    if (this.tooltip != null) this.tooltip.tooltip('update');
-
-    const volume = this.calcVolume();
-    const enabled = volume !== 0;
-
-    if (this.$video != null) {
-      this.$video.volume = volume;
-
-      if (this.$video.muted != !enabled) {
-        this.$video.muted = !enabled;
-
-        socketSend(enabled ? 'resume' : 'pause', this.id);
-
-        if (this.videoEnabled) {
-          this.$elem.classList.toggle('video-enabled', enabled);
-        }
-      }
-    }
-
-    this.inRange = enabled;
-
-    const scalar = (volume * (1 - 0.5)) + 0.5;
-    this.$elem.style.setProperty('--scale', scalar);
-  }
-
-  setBroadcast(enabled) {
-    this.broadcast = enabled;
-    this.$elem.classList.toggle('broadcast-enabled', enabled);
-    this.setPosition(this.x, this.y); // To update scale
-  }
-
-  calcVolume() {
-    if (this.broadcast) {
+const playerDelegate = {
+  calcVolume: function(player) {
+    if (player.broadcast) {
       return 1;
     }
 
     // calulate angle and distance from listener to sound
-    const dist = Math.hypot(this.y - selfPlayer.y, this.x - selfPlayer.x);
+    const dist = Math.hypot(player.y - selfPlayer.y, player.x - selfPlayer.x);
     const scale = 1 - (dist - SOUND_NEAR_RANGE) / (SOUND_CUTOFF_RANGE - SOUND_NEAR_RANGE);
 
     // target is too far away, no volume
@@ -240,242 +148,25 @@ class Player {
     }
 
     return scale;
-  }
-
-  get name() {
-    return this._name;
-  }
-  set name(value) {
-    this._name = value;
-    this.$elem.querySelector('.avatar').textContent = value[0].toUpperCase();
-  }
-
-  get audioEnabled() {
-    return this._audioEnabled;
-  }
-  set audioEnabled(enabled) {
-    this._audioEnabled = enabled;
-
-    this.$elem.classList.toggle('audio-enabled', enabled);
-  }
-
-  get videoEnabled() {
-    return this._videoEnabled;
-  }
-  set videoEnabled(enabled) {
-    this._videoEnabled = enabled;
-
-    if (this.inRange) {
-      this.$elem.classList.toggle('video-enabled', enabled);
-    }
-  }
-
-  drawAudioRing(data) {
-    const bottomCutoff = 0.4;
-    const scale = Math.max(0, ((Math.max(...data) / 255) - bottomCutoff) / (1 - bottomCutoff));
-    const width = (scale * 0.2) + 1;
-    this.$elem.querySelector('.audioRing').style.setProperty('--volume', width);
-  }
-
-  render() {
-    if (this.stream) {
-      if (this.analyser == null) {
-        const track = this.stream.getAudioTracks()[0];
-
-        if (track != null) {
-          const AudioContext = window.AudioContext || window.webkitAudioContext;
-          const context = new AudioContext();
-          const source = context.createMediaStreamSource(new MediaStream([track]));
-          this.analyser = context.createAnalyser();
-          this.analyser.smoothingTimeConstant = 0.3;
-          source.connect(this.analyser);
-        }
-      }
-
-      const data = new Uint8Array(this.analyser.frequencyBinCount);
-      this.analyser.getByteFrequencyData(data);
-
-      this.drawAudioRing(data);
-    }
-  }
-}
-
-class SelfPlayer extends Player {
-  constructor(id, name, pos) {
-    super(id, name, pos);
-    this.inRange = true;
-  }
-
-  initElement() {
-    super.initElement();
-
-    this.$elem.classList.add('self');
-
-    const $elem = this.$elem;
-    let active = false;
-    let offsetX;
-    let offsetY;
-
-    const pickup = (e) => {
-      if (e.target !== $elem && e.target.parentNode !== $elem) {
-        return;
-      }
-
-      if (e.type == 'mousedown' && event.which !== 1) {
-        return;
-      }
-
-      pz.pause();
-
-      e.stopPropagation();
-      active = true;
-
-      const rect = $elem.getBoundingClientRect();
-
-      if (e.type === 'touchstart') {
-        offsetX = e.touches[0].clientX - rect.x;
-        offsetY = e.touches[0].clientY - rect.y;
-      } else {
-        offsetX = e.clientX - rect.x;
-        offsetY = e.clientY - rect.y;
-      }
-    };
-
-    const move = (e) => {
-      if (active) {
-        e.preventDefault();
-
-        let x; let y;
-        if (e.type === 'touchmove') {
-          x = e.touches[0].clientX - offsetX;
-          y = e.touches[0].clientY - offsetY;
-        } else {
-          x = e.clientX - offsetX;
-          y = e.clientY - offsetY;
-        }
-
-        setTranslate(x, y, $elem);
-      }
-    };
-
-    const drop = (e) => {
-      active = false;
-      pz.resume();
-    };
-
-    const setTranslate = (xPos, yPos, el) => {
-      // Account for global zoom level
-      const transform = pz.getTransform();
-      const x = (xPos - transform.x) / transform.scale;
-      const y = (yPos - transform.y) / transform.scale;
-
-      this.setPosition(x, y);
-    };
-
-    $bg.addEventListener('mousedown', pickup);
-    $bg.addEventListener('touchstart', pickup);
-    $bg.addEventListener('mousemove', move);
-    $bg.addEventListener('touchmove', move);
-    $bg.addEventListener('mouseup', drop);
-    $bg.addEventListener('touchend', drop);
-  }
-
-  setMic(enabled) {
-    super.setMic(enabled);
-    this.audioEnabled = enabled;
-    this.sync();
-  }
-
-  setCam(enabled) {
-    super.setCam(enabled);
-    this.videoEnabled = enabled;
-    this.sync();
-  }
-
-  setBroadcast(enabled) {
-    super.setBroadcast(enabled);
-    this.sync();
-  }
-
-  setPosition(x, y) {
-    this.x = x;
-    this.y = y;
-    this.$elem.style.setProperty('--translate-x', `${x}px`);
-    this.$elem.style.setProperty('--translate-y', `${y}px`);
-
-    // TODO: reintroduce throttle
-    socket.send(['pos', Math.round(this.x), Math.round(this.y)]);
-
-    // Refresh other players' positions to trigger size/volume updates etc.
+  },
+  pause: function(id) {
+    socketSend('pause', id);
+  },
+  resume: function(id) {
+    socketSend('resume', id);
+  },
+  position: function(x, y) {
+    socket.send(['pos', x, y]);
+  },
+  update: function(name, audio, video, broadcast) {
+    socket.send(['update', name, audio, video, broadcast]);
+  },
+  updatePlayers: function() {
     Object.values(players).forEach((player) => {
       player.setPosition(player.x, player.y);
     });
-  }
-
-  onDragStart(event) {
-    event.stopPropagation();
-    this.data = event.data;
-    this.dragging = true;
-  }
-
-  onDragEnd() {
-    this.dragging = false;
-    this.data = null;
-  }
-
-  onDragMove(event) {
-    if (!this.dragging) {
-      return;
-    }
-    event.stopPropagation();
-    const newPosition = this.data.getLocalPosition(this.parent);
-    this.setPosition(newPosition.x, newPosition.y);
-  }
-
-  sync() {
-    socket.send(['update', this.name, this.audioEnabled, this.videoEnabled, this.broadcast]);
-  }
-}
-
-
-// Settings
-let micEnabled = true;
-let camEnabled = true;
-const SOUND_CUTOFF_RANGE = 350;
-const SOUND_NEAR_RANGE = 200;
-
-const colorFor = (name) => {
-  // DJB2
-  const colors = [0xa188a6, 0x315867, 0x2a9d8f, 0x5a9fba, 0xe9c46a, 0xf4a261, 0xe76f51];
-  const chars = name.toLowerCase().split('').map((str) => str.charCodeAt(0));
-  const hash = chars.reduce((prev, curr) => ((prev << 5) + prev) + curr, 5381);
-  return colors[Math.abs(hash) % colors.length];
+  },
 };
-
-function lighten(num, amt) {
-  let r = (num >> 16) + amt;
-  if (r > 255) {
-    r = 255;
-  } else if (r < 0) {
-    r = 0;
-  }
-  let b = ((num >> 8) & 0x00FF) + amt;
-  if (b > 255) {
-    b = 255;
-  } else if (b < 0) {
-    b = 0;
-  }
-  let g = (num & 0x0000FF) + amt;
-  if (g > 255) {
-    g = 255;
-  } else if (g < 0) {
-    g = 0;
-  }
-  return (g | (b << 8) | (r << 16));
-}
-
-let selfPlayer;
-const players = {};
 
 // play stream
 async function playStream(stream, target) {
@@ -723,7 +414,7 @@ function initSocket() {
       }
 
       const name = localStorage.getItem('name');
-      selfPlayer = new SelfPlayer(data.id, name, data.pos);
+      selfPlayer = new SelfPlayer(data.id, name, data.pos, playerDelegate);
       selfPlayer.stream = stream;
       selfPlayer.audioEnabled = stream.getAudioTracks()[0] != null;
       selfPlayer.videoEnabled = stream.getVideoTracks()[0] != null;
@@ -741,6 +432,7 @@ function initSocket() {
             p.id,
             p.name,
             {x: parseInt(p.pos.x), y: parseInt(p.pos.y)},
+            playerDelegate,
         );
 
         player.audioEnabled = p.audioEnabled;
@@ -764,7 +456,7 @@ function initSocket() {
       }
 
       console.log('calling', data.join.id);
-      const player = new Player(data.join.id, data.join.name, data.join.pos);
+      const player = new Player(data.join.id, data.join.name, data.join.pos, playerDelegate);
 
       player.audioEnabled = true;
       player.videoEnabled = true;
@@ -996,7 +688,7 @@ audioInputSelect.onchange = videoSelect.onchange = (e) => {
 
     selfPlayer.analyser = null;
 
-    if (e.target.id == 'videoSource') {  
+    if (e.target.id == 'videoSource') {
       selfPlayer.stream = stream;
       playStream(stream, selfPlayer);
     }
