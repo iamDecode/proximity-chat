@@ -1,27 +1,7 @@
 import {Player, SelfPlayer} from './player.js';
+import {Socket} from './socket.js';
 
 let socket;
-
-function socketSend(command, arg) {
-  const requestId = socket.requestId++;
-
-  return new Promise((res, rej) => {
-    const check = function(message) {
-      const components = message.data.split(',');
-      if (components[0] === 'ACK' && components[1] == requestId) {
-        socket.removeEventListener('message', check);
-        res(message.data.substr(components[0].length + components[1].length + 2));
-      }
-    };
-    socket.addEventListener('message', check);
-    if (arg != null) {
-      socket.send([command, requestId, arg]);
-    } else {
-      socket.send([command, requestId]);
-    }
-  });
-}
-
 
 if (localStorage.getItem('name') == null) {
   const $modal = document.querySelector('#usernameModal');
@@ -150,10 +130,10 @@ const playerDelegate = {
     return scale;
   },
   pause: function(id) {
-    socketSend('pause', id);
+    socket.asyncSend('pause', id);
   },
   resume: function(id) {
-    socketSend('resume', id);
+    socket.asyncSend('resume', id);
   },
   position: function(x, y) {
     socket.send(['pos', x, y]);
@@ -243,7 +223,7 @@ async function loadDevice(routerRtpCapabilities) {
 
 
 async function initProducerTransport() {
-  const data = await socketSend('createProducerTransport', JSON.stringify({
+  const data = await socket.asyncSend('createProducerTransport', JSON.stringify({
     forceTcp: false,
     rtpCapabilities: device.rtpCapabilities,
   }));
@@ -252,7 +232,7 @@ async function initProducerTransport() {
 
   transport.on('connect', async ({dtlsParameters}, callback, errback) => {
     try {
-      await socketSend('connectProducerTransport', JSON.stringify(dtlsParameters));
+      await socket.asyncSend('connectProducerTransport', JSON.stringify(dtlsParameters));
       callback();
     } catch (e) {
       errback(e);
@@ -261,7 +241,7 @@ async function initProducerTransport() {
 
   transport.on('produce', async ({kind, rtpParameters}, callback, errback) => {
     try {
-      const id = await socketSend('produce', JSON.stringify({
+      const id = await socket.asyncSend('produce', JSON.stringify({
         transportId: transport.id,
         kind,
         rtpParameters,
@@ -300,7 +280,7 @@ async function initProducerTransport() {
 }
 
 async function initConsumerTransport() {
-  const data = await socketSend('createConsumerTransport', JSON.stringify({
+  const data = await socket.asyncSend('createConsumerTransport', JSON.stringify({
     forceTcp: false,
   }));
 
@@ -308,7 +288,7 @@ async function initConsumerTransport() {
 
   transport.on('connect', async ({dtlsParameters}, callback, errback) => {
     try {
-      await socketSend('connectConsumerTransport', JSON.stringify({
+      await socket.asyncSend('connectConsumerTransport', JSON.stringify({
         transportId: transport.id,
         dtlsParameters,
       }));
@@ -346,7 +326,7 @@ async function initConsumerTransport() {
 
 async function consume(transport, producerKind, userId) {
   const {rtpCapabilities} = device;
-  const data = await socketSend('consume', JSON.stringify({userId, producerKind, rtpCapabilities}));
+  const data = await socket.asyncSend('consume', JSON.stringify({userId, producerKind, rtpCapabilities}));
 
   if (data == '') {
     console.log('data was empty for', producerKind, 'for user', userId);
@@ -387,7 +367,7 @@ async function getStream(constraints, isWebcam) {
 }
 
 function initSocket() {
-  socket = new WebSocket(`wss://${location.hostname}:9001`);
+  socket = new Socket(`wss://${location.hostname}:9001`);
   socket.requestId = 0;
 
   socket.onmessage = async (message) => {
@@ -509,7 +489,7 @@ function initSocket() {
 }
 
 async function initMediasoup() {
-  const rtpCapabilities = await socketSend('getRouterRtpCapabilities');
+  const rtpCapabilities = await socket.asyncSend('getRouterRtpCapabilities');
 
   await loadDevice(JSON.parse(rtpCapabilities));
 
