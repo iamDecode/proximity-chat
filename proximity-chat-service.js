@@ -1,5 +1,3 @@
-'use strict';
-
 const {ROOM_CONFIG} = require('./public/room/config');
 
 // Calculate a starting position. Spread out players so joining players don't
