@@ -1,7 +1,9 @@
 import {Player, SelfPlayer} from './player.js';
 import {Socket} from './socket.js';
+import {MediasoupClient} from './mediasoup-client.js';
 
 let socket;
+let mediasoupClient;
 
 if (localStorage.getItem('name') == null) {
   const $modal = document.querySelector('#usernameModal');
@@ -177,198 +179,24 @@ async function playStream(stream, target) {
   }
 }
 
-let pendingJoins = [];
-
 // start a call with target
 async function startCall(target) {
   console.log('starting call with ', target);
   const player = players[target];
 
-  if (!player) {
-    console.log('couldn\'t find player for stream', call.peer);
+  if (player == null) {
+    console.log('couldn\'t find player for stream', target);
   } else if (player.stream == null) {
-    const stream = new MediaStream();
-    const audio = await consume(consumerTransport, 'audio', target);
-    stream.addTrack(audio);
-
-    const video = await consume(consumerTransport, 'video', target);
-    if (video != null) {
-      stream.addTrack(video);
-    }
-
-    player.stream = stream;
-    await playStream(stream, target);
+    player.stream = await mediasoupClient.createStream(target);
+    await playStream(player.stream, target);
     // To ensure volume relative to position is set correctly.
     player.setPosition(player.x, player.y);
     console.log('created stream for', target);
   }
 }
 
-let device;
-let producerTransport;
-let consumerTransport;
-let stream;
-
-async function loadDevice(routerRtpCapabilities) {
-  try {
-    device = new mediasoupClient.Device();
-  } catch (error) {
-    if (error.name === 'UnsupportedError') {
-      console.error('browser not supported');
-      alert('Your browser is not supported!');
-    }
-  }
-  await device.load({routerRtpCapabilities});
-}
-
-
-async function initProducerTransport() {
-  const data = await socket.asyncSend('createProducerTransport', JSON.stringify({
-    forceTcp: false,
-    rtpCapabilities: device.rtpCapabilities,
-  }));
-
-  const transport = device.createSendTransport(JSON.parse(data));
-
-  transport.on('connect', async ({dtlsParameters}, callback, errback) => {
-    try {
-      await socket.asyncSend('connectProducerTransport', JSON.stringify(dtlsParameters));
-      callback();
-    } catch (e) {
-      errback(e);
-    }
-  });
-
-  transport.on('produce', async ({kind, rtpParameters}, callback, errback) => {
-    try {
-      const id = await socket.asyncSend('produce', JSON.stringify({
-        transportId: transport.id,
-        kind,
-        rtpParameters,
-      }));
-
-      if (id != '') {
-        callback({id});
-      } else {
-        errback();
-      }
-    } catch (e) {
-      errback(e);
-    }
-  });
-
-  transport.on('connectionstatechange', (state) => {
-    switch (state) {
-      case 'connecting':
-        console.log('producer: publishing...');
-        break;
-
-      case 'connected':
-        console.log('producer: connected!');
-        break;
-
-      case 'failed':
-        transport.close();
-        console.log('producer: connection failed.');
-        break;
-
-      default: break;
-    }
-  });
-
-  producerTransport = transport;
-}
-
-async function initConsumerTransport() {
-  const data = await socket.asyncSend('createConsumerTransport', JSON.stringify({
-    forceTcp: false,
-  }));
-
-  const transport = device.createRecvTransport(JSON.parse(data));
-
-  transport.on('connect', async ({dtlsParameters}, callback, errback) => {
-    try {
-      await socket.asyncSend('connectConsumerTransport', JSON.stringify({
-        transportId: transport.id,
-        dtlsParameters,
-      }));
-      callback();
-    } catch (e) {
-      errback(e);
-    }
-  });
-
-  transport.on('connectionstatechange', async (state) => {
-    switch (state) {
-      case 'connecting':
-        console.log('consumer: subscribing...');
-        break;
-
-      case 'connected':
-        console.log('consumer: subscribed!');
-        break;
-
-      case 'failed':
-        transport.close();
-        console.log('consumer: connection failed.');
-        break;
-
-      default: break;
-    }
-  });
-
-  consumerTransport = transport;
-
-  console.log(`pending joins: there were ${pendingJoins.length} pending`);
-  pendingJoins.forEach((id) => startCall(id));
-  pendingJoins = [];
-}
-
-async function consume(transport, producerKind, userId) {
-  const {rtpCapabilities} = device;
-  const data = await socket.asyncSend('consume', JSON.stringify({userId, producerKind, rtpCapabilities}));
-
-  if (data == '') {
-    console.log('data was empty for', producerKind, 'for user', userId);
-    return null;
-  }
-
-  const {
-    producerId,
-    id,
-    kind,
-    rtpParameters,
-  } = JSON.parse(data);
-
-  const codecOptions = {};
-  const consumer = await transport.consume({
-    id,
-    producerId,
-    kind,
-    rtpParameters,
-    codecOptions,
-  });
-
-  return consumer.track;
-}
-
-async function getStream(constraints, isWebcam) {
-  try {
-    const stream = await navigator.mediaDevices.getUserMedia(constraints);
-    return stream;
-  } catch (err) {
-    if ('video' in constraints &&
-    ['NotAllowedError', 'OverconstrainedError', 'NotFoundError'].includes(err.name)) {
-      delete constraints.video;
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
-      return stream;
-    }
-  }
-}
-
 function initSocket() {
   socket = new Socket(`wss://${location.hostname}:9001`);
-  socket.requestId = 0;
 
   socket.onmessage = async (message) => {
     /* eslint-disable brace-style
@@ -394,6 +222,8 @@ function initSocket() {
       }
 
       const name = localStorage.getItem('name');
+      const stream = mediasoupClient.stream;
+
       selfPlayer = new SelfPlayer(data.id, name, data.pos, playerDelegate);
       selfPlayer.stream = stream;
       selfPlayer.audioEnabled = stream.getAudioTracks()[0] != null;
@@ -421,11 +251,7 @@ function initSocket() {
 
         players[p.id] = player;
 
-        if (consumerTransport == null) {
-          pendingJoins.push(p.id);
-        } else {
-          startCall(p.id);
-        }
+        startCall(p.id);
       }
     }
 
@@ -443,11 +269,7 @@ function initSocket() {
 
       players[data.join.id] = player;
 
-      if (consumerTransport == null) {
-        pendingJoins.push(data.join.id);
-      } else {
-        startCall(data.join.id);
-      }
+      startCall(data.join.id);
     }
 
     // update player position
@@ -483,54 +305,15 @@ function initSocket() {
     }
   };
 
-  socket.onopen = (event) => {
-    initMediasoup();
-  };
-}
+  socket.onopen = async (event) => {
+    mediasoupClient = new MediasoupClient(socket);
 
-async function initMediasoup() {
-  const rtpCapabilities = await socket.asyncSend('getRouterRtpCapabilities');
+    await mediasoupClient.init();
 
-  await loadDevice(JSON.parse(rtpCapabilities));
-
-  await initProducerTransport();
-
-  try {
-    stream = await getStream({audio: true, video: true}, true);
     navigator.mediaDevices.enumerateDevices().then(gotDevices);
 
-    const video = stream.getVideoTracks()[0];
-
-    if (video != null) {
-      const params = {track: video};
-
-      // Simulcast
-      params.encodings = [
-        {rid: 'r0', maxBitrate: 100000, scalabilityMode: 'S1T3'},
-        {rid: 'r1', maxBitrate: 300000, scalabilityMode: 'S1T3'},
-        {rid: 'r2', maxBitrate: 900000, scalabilityMode: 'S1T3'},
-      ];
-      params.codecOptions = {
-        videoGoogleStartBitrate: 1000,
-      };
-
-      await producerTransport.produce(params);
-    }
-
-    const audio = stream.getAudioTracks()[0];
-
-    if (audio != null) {
-      await producerTransport.produce({track: audio});
-    } else {
-      alert('No audio devices detected!');
-    }
-  } catch (err) {
-    console.error(err);
-  }
-
-  await initConsumerTransport();
-
-  socket.send(['connect', localStorage.getItem('name')]);
+    socket.send(['connect', localStorage.getItem('name')]);
+  };
 }
 
 document.querySelector('button.mic').onclick = function() {
@@ -639,10 +422,6 @@ function attachSinkId(element, sinkId) {
   }
 }
 
-function handleError(error) {
-  throw error;
-}
-
 let sinkId = null;
 audioOutputSelect.onchange = (_) => {
   const audioDestination = audioOutputSelect.value;
@@ -652,7 +431,7 @@ audioOutputSelect.onchange = (_) => {
   });
 };
 
-audioInputSelect.onchange = videoSelect.onchange = (e) => {
+audioInputSelect.onchange = videoSelect.onchange = async (e) => {
   let audioSource = audioInputSelect.value;
   if (audioSource.length == 0) audioSource = null;
   let videoSource = videoSelect.value;
@@ -662,26 +441,31 @@ audioInputSelect.onchange = videoSelect.onchange = (e) => {
     audio: {deviceId: audioSource ? {exact: audioSource} : undefined},
     video: {deviceId: videoSource ? {exact: videoSource} : undefined},
   };
-  getStream(constraints, true).then((stream) => {
-    const audioTrack = stream.getAudioTracks()[0];
-    const videoTrack = stream.getVideoTracks()[0];
+  const stream = await mediasoupClient.getStream(constraints, true);
+  const audioTrack = stream.getAudioTracks()[0];
+  const videoTrack = stream.getVideoTracks()[0];
 
-    selfPlayer.analyser = null;
+  selfPlayer.analyser = null;
 
-    if (e.target.id == 'videoSource') {
-      selfPlayer.stream = stream;
-      playStream(stream, selfPlayer);
+  if (e.target.id == 'videoSource') {
+    selfPlayer.stream = stream;
+    playStream(stream, selfPlayer);
+  }
+
+  mediasoupClient.producerTransport.handler._pc.getSenders().forEach((s) => {
+    if (s.track.kind == videoTrack.kind) {
+      console.log('replacing video!');
+      s.replaceTrack(videoTrack);
+    } else if (s.track.kind == audioTrack.kind) {
+      console.log('replacing audio!');
+      s.replaceTrack(audioTrack);
     }
+  });
 
-    producerTransport.handler._pc.getSenders().forEach((s) => {
-      if (s.track.kind == videoTrack.kind) {
-        console.log('replacing video!');
-        s.replaceTrack(videoTrack);
-      } else if (s.track.kind == audioTrack.kind) {
-        console.log('replacing audio!');
-        s.replaceTrack(audioTrack);
-      }
-    });
-    return navigator.mediaDevices.enumerateDevices();
-  }).then(gotDevices).catch(handleError);
+  const devices = await navigator.mediaDevices.enumerateDevices();
+  try {
+    gotDevices(devices);
+  } catch (e) {
+    console.error('Could not fetch devices: ', e);
+  }
 };
