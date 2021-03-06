@@ -54,6 +54,10 @@ export class Player {
   }
 
   addVideo(element) {
+    if (this.$video != null) {
+      this.$video.remove();
+    }
+
     this.$video = element;
     this.$elem.appendChild(element);
   }

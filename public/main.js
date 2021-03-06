@@ -204,12 +204,9 @@ audioInputSelect.onchange = videoSelect.onchange = async (e) => {
   const audioTrack = stream.getAudioTracks()[0];
   const videoTrack = stream.getVideoTracks()[0];
 
+  app.selfPlayer.stream = stream;
+  app.playStream(stream, app.selfPlayer);
   app.selfPlayer.analyser = null;
-
-  if (e.target.id == 'videoSource') {
-    app.selfPlayer.stream = stream;
-    playStream(stream, app.selfPlayer);
-  }
 
   app.mediasoupClient.producerTransport.handler._pc.getSenders().forEach((s) => {
     if (s.track.kind == videoTrack.kind) {
