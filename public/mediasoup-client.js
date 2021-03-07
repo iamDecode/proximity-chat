@@ -4,6 +4,7 @@ export class MediasoupClient {
     this.producerTransport = null;
     this.consumerTransport = null;
     this.stream = null;
+    this.screenStream = null;
     this.socket = socket;
   }
 
@@ -15,7 +16,7 @@ export class MediasoupClient {
     this.producerTransport = await this.initProducerTransport();
 
     try {
-      this.stream = await this.getStream({audio: true, video: true}, true);
+      this.stream = await this.getStream({audio: true, video: true});
 
       const video = this.stream.getVideoTracks()[0];
 
@@ -88,7 +89,7 @@ export class MediasoupClient {
       try {
         const id = await this.socket.asyncSend('produce', JSON.stringify({
           transportId: transport.id,
-          kind,
+          kind: (this.screenStream == null) ? kind : `screen-${kind}`,
           rtpParameters,
         }));
 
@@ -194,7 +195,7 @@ export class MediasoupClient {
     return consumer.track;
   }
 
-  async getStream(constraints, isWebcam) {
+  async getStream(constraints) {
     try {
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
       return stream;
@@ -205,19 +206,59 @@ export class MediasoupClient {
         const stream = await navigator.mediaDevices.getUserMedia(constraints);
         return stream;
       }
+
+      throw err;
     }
   }
 
-  async createStream(target) {
+  async createStream(target, isScreen) {
     const stream = new MediaStream();
-    const audio = await this.consume(this.consumerTransport, 'audio', target);
-    stream.addTrack(audio);
+    const aKind = isScreen ? 'screen-audio' : 'audio';
+    const audio = await this.consume(this.consumerTransport, aKind, target);
+    if (audio != null) {
+      stream.addTrack(audio);
+    }
 
-    const video = await this.consume(this.consumerTransport, 'video', target);
+    const vKind = isScreen ? 'screen-video' : 'video';
+    const video = await this.consume(this.consumerTransport, vKind, target);
     if (video != null) {
       stream.addTrack(video);
     }
 
     return stream;
+  }
+
+  async shareScreen() {
+    this.screenStream = await navigator.mediaDevices.getDisplayMedia({
+      audio: true,
+      video:
+      {
+        displaySurface: 'monitor',
+        logicalSurface: true,
+        cursor: true,
+        width: {max: 1920},
+        height: {max: 1080},
+        frameRate: {max: 30},
+      },
+    });
+
+    const video = this.screenStream.getVideoTracks()[0];
+    const params = {track: video};
+
+    // Simulcast
+    params.encodings = [
+      {dtx: true, maxBitrate: 1500000},
+      {dtx: true, maxBitrate: 6000000},
+    ];
+    params.codecOptions = {
+      videoGoogleStartBitrate: 1000,
+    };
+
+    await this.producerTransport.produce(params);
+
+    const audio = this.screenStream.getAudioTracks()[0];
+    if (audio != null) {
+      await this.producerTransport.produce({track: audio});
+    }
   }
 }

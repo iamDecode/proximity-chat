@@ -48,6 +48,8 @@ class ProximityChatService {
       // Let this client listen to join, leave, and position broadcasts
       ws.subscribe('join');
       ws.subscribe('leave');
+      ws.subscribe('add');
+      ws.subscribe('remove');
       ws.subscribe('position');
       ws.subscribe('update');
 
@@ -62,12 +64,22 @@ class ProximityChatService {
               videoEnabled: u[1].videoEnabled,
               pos: u[1].pos,
               broadcast: u[1].broadcast,
+              objects: u[1].objects,
             })),
       }));
 
-      const user = {ws, id, name, audioEnabled: true, videoEnabled: true, pos, broadcast: false};
-      user.emitPos = (x, y) => {
-        this.usocket.publish('position', String([id, x, y]));
+      const user = {
+        ws,
+        id,
+        name,
+        audioEnabled: true,
+        videoEnabled: true,
+        pos,
+        broadcast: false,
+        objects: {},
+      };
+      user.emitPos = (objectId, x, y) => {
+        this.usocket.publish('position', String([id, objectId, x, y]));
       };
 
       this.users[id] = user;
@@ -96,10 +108,48 @@ class ProximityChatService {
       return;
     }
 
+    if (components[0] == 'add') {
+      const objectId = components[1];
+      const object = {
+        pos: {x: user.pos.x, y: user.pos.y},
+      };
+      user.objects[objectId] = object;
+      this.usocket.publish('add', JSON.stringify({
+        add: {
+          id: user.id,
+          objectId: objectId,
+          pos: object.pos,
+        },
+      }));
+    }
+
+    if (components[0] == 'remove') {
+      const objectId = components[1];
+      this.usocket.publish('remove', JSON.stringify({
+        remove: {
+          id: user.id,
+          objectId: objectId,
+        },
+      }));
+      delete user.objects[objectId];
+    }
+
     if (components[0] == 'pos') {
-      user.pos.x = parseInt(components[1]);
-      user.pos.y = parseInt(components[2]);
-      user.emitPos(user.pos.x, user.pos.y);
+      let objectId;
+      const x = parseInt(components[2]);
+      const y = parseInt(components[3]);
+
+      if (components[1] == '') {
+        objectId = '';
+        user.pos.x = x;
+        user.pos.y = y;
+      } else {
+        objectId = components[1];
+        user.objects[objectId].pos.x = x;
+        user.objects[objectId].pos.y = y;
+      }
+
+      user.emitPos(objectId, x, y);
     }
 
     // Else: probably something for mediasoup service.

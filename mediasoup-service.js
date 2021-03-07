@@ -139,7 +139,8 @@ class MediasoupService {
       const user = this.users.get(ws.id);
 
       if (user != null) {
-        const producer = await user.producer.transport.produce({kind, rtpParameters});
+        const kind2 = kind.replace('screen-', '');
+        const producer = await user.producer.transport.produce({kind: kind2, rtpParameters});
         user.producer[kind] = producer;
         this.users.set(ws.id, user);
         ws.send(String(['ACK', requestId, producer.id]));
@@ -190,6 +191,7 @@ class MediasoupService {
         if (consumers != null) {
           for (const key in consumers) {
             if (
+              key.indexOf('screen') === -1 &&
               consumers.hasOwnProperty(key) &&
               consumers[key] != null &&
               consumers[key].closed === false
@@ -217,6 +219,7 @@ class MediasoupService {
         if (consumers != null) {
           for (const key in consumers) {
             if (
+              key.indexOf('screen') === -1 &&
               consumers.hasOwnProperty(key) &&
               consumers[key] != null &&
               consumers[key].closed === false
@@ -227,6 +230,28 @@ class MediasoupService {
                 console.log('resume error', e);
               }
             }
+          }
+        }
+      }
+
+      return;
+    }
+
+    if (components[0] == 'remove') {
+      const objectId = components[1];
+      const user = this.users.get(ws.id);
+
+      for (const key in user.producer) {
+        if (
+          key.indexOf(objectId) === 0 &&
+          user.producer.hasOwnProperty(key) &&
+          user.producer[key] != null &&
+          user.producer[key].closed === false
+        ) {
+          try {
+            user.producer[key].close();
+            delete user.producer[key];
+          } catch (e) {
           }
         }
       }
