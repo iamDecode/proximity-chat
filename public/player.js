@@ -16,6 +16,7 @@ export class Player {
     this.broadcast = false;
     this._audioEnabled = true;
     this._videoEnabled = false;
+    this.objects = {};
     this.delegate = delegate;
 
     if (!(this instanceof SelfPlayer)) {
@@ -204,11 +205,11 @@ export class SelfPlayer extends Player {
       const rect = $elem.getBoundingClientRect();
 
       if (e.type === 'touchstart') {
-        offsetX = e.touches[0].clientX - rect.x;
-        offsetY = e.touches[0].clientY - rect.y;
+        offsetX = e.touches[0].clientX - rect.x - (rect.width/2);
+        offsetY = e.touches[0].clientY - rect.y - (rect.height/2);
       } else {
-        offsetX = e.clientX - rect.x;
-        offsetY = e.clientY - rect.y;
+        offsetX = e.clientX - rect.x - (rect.width/2);
+        offsetY = e.clientY - rect.y - (rect.height/2);
       }
     };
 
