@@ -82,7 +82,12 @@ const updateTooltip = (_) => {
   for (const player of app.players.values()) {
     if (player.tooltip != null) {
       player.tooltip.tooltip('update');
-      break;
+    }
+
+    for (const object of Object.values(player.objects)) {
+      if (object.tooltip != null) {
+        object.tooltip.tooltip('update');
+      }
     }
   }
 };
@@ -106,6 +111,11 @@ document.querySelector('button.cam').onclick = function() {
   app.selfPlayer.setCam(camEnabled);
   this.classList.toggle('disabled');
   this.querySelector('i').innerHTML = camEnabled ? 'videocam' : 'videocam_off';
+};
+
+document.querySelector('button.screenshare').onclick = async function() {
+  const screenEnabled = app.mediasoupClient.screenStream != null;
+  await app.shareScreen(!screenEnabled);
 };
 
 document.querySelector('button.settings').onclick = function() {
@@ -200,7 +210,7 @@ audioInputSelect.onchange = videoSelect.onchange = async (e) => {
     audio: {deviceId: audioSource ? {exact: audioSource} : undefined},
     video: {deviceId: videoSource ? {exact: videoSource} : undefined},
   };
-  const stream = await app.mediasoupClient.getStream(constraints, true);
+  const stream = await app.mediasoupClient.getStream(constraints);
   const audioTrack = stream.getAudioTracks()[0];
   const videoTrack = stream.getVideoTracks()[0];
 

@@ -1,5 +1,6 @@
 import {MediasoupClient} from './mediasoup-client.js';
 import {Player, SelfPlayer} from './player.js';
+import {ScreenShare, SelfScreenShare} from './object.js';
 import {Socket} from './socket.js';
 import {attachSinkId} from './utils.js';
 
@@ -24,12 +25,14 @@ export class App {
       });
     };
 
-    this.playerDelegate = this.getPlayerDelegate();
+    this.playerDelegate = this.getDelegate();
 
     // Start render loop for audioRing visualizations (10 fps)
     const performAnimation = () => {
       if (this.selfPlayer != null) this.selfPlayer.render();
-      for (const player of this.players.values()) player.render();
+      for (const player of this.players.values()) {
+        player.render();
+      }
     };
 
     setInterval(performAnimation, 1000/10);
@@ -86,8 +89,21 @@ export class App {
         player.setBroadcast(p.broadcast);
 
         this.players.set(p.id, player);
-
         this.startCall(p.id);
+
+        for (const objectId of Object.keys(p.objects)) {
+          const object = p.objects[objectId];
+          const delegate = this.getDelegate(objectId);
+          const screenShare = new ScreenShare(objectId, p.name, object.pos, delegate);
+          player.objects[objectId] = screenShare;
+
+          screenShare.stream = await this.mediasoupClient.createStream(player.id, true);
+          await this.playStream(screenShare.stream, player.id, objectId);
+
+          screenShare.audioEnabled = true;
+          screenShare.videoEnabled = true;
+          screenShare.setPosition(screenShare.x, screenShare.y);
+        }
       }
     }
 
@@ -108,11 +124,73 @@ export class App {
       this.startCall(data.join.id);
     }
 
+    // Remove players who left or disconnected
+    else if ('leave' in data) {
+      console.log('call dropped from', data.leave.id);
+      // Remove player from players list
+
+      if (this.players.has(data.leave.id)) {
+        const player = this.players.get(data.leave.id);
+
+        for (const object of Object.values(player.objects)) {
+          object.tooltip.tooltip('dispose');
+          object.$elem.remove();
+          delete player.objects[object.id];
+        }
+
+        player.tooltip.tooltip('dispose');
+        player.$elem.remove();
+        this.players.delete(player.id);
+      };
+    }
+
+    // Add objects
+    else if ('add' in data) {
+      if (this.players.has(data.add.id)) {
+        const objectId = data.add.objectId;
+        const player = this.players.get(data.add.id);
+        console.log('adding object with id', objectId, 'to user', player.id);
+
+
+        if (objectId == 'screen') {
+          const delegate = this.getDelegate(objectId);
+          const screenShare = new ScreenShare(objectId, player.name, data.add.pos, delegate);
+          player.objects[objectId] = screenShare;
+
+          screenShare.stream = await this.mediasoupClient.createStream(player.id, true);
+          await this.playStream(screenShare.stream, player.id, objectId);
+
+          screenShare.audioEnabled = true;
+          screenShare.videoEnabled = true;
+          screenShare.setPosition(screenShare.x, screenShare.y);
+        }
+      };
+    }
+
+    // Remove objects
+    else if ('remove' in data) {
+      if (this.players.has(data.remove.id)) {
+        console.log('removing object with id', data.remove.objectId, 'to user', data.remove.id);
+        const player = this.players.get(data.remove.id);
+        const object = player.objects[data.remove.objectId];
+        object.tooltip.tooltip('dispose');
+        object.$elem.remove();
+        delete player.objects[data.remove.objectId];
+      }
+    }
+
     // Update player position
     else if ('position' in data) {
       if (this.players.has(data.position[0])) {
         const player = this.players.get(data.position[0]);
-        player.setPosition(parseInt(data.position[1]), parseInt(data.position[2]));
+        const x = parseInt(data.position[2]);
+        const y = parseInt(data.position[3]);
+
+        if (data.position[1] != '') {
+          player.objects[data.position[1]].setPosition(x, y);
+        } else {
+          player.setPosition(x, y);
+        }
       }
     }
 
@@ -126,22 +204,9 @@ export class App {
         player.setBroadcast(data.update.broadcast);
       }
     }
-
-    // Remove players who left or disconnected
-    else if ('leave' in data) {
-      console.log('call dropped from', data.leave.id);
-      // Remove player from players list
-
-      if (this.players.has(data.leave.id)) {
-        const player = this.players.get(data.leave.id);
-        player.tooltip.tooltip('dispose');
-        player.$elem.remove();
-        this.players.delete(player.id);
-      };
-    }
   }
 
-  async playStream(stream, target) {
+  async playStream(stream, target, objectId) {
     // Create the video element for the stream
     const $video = document.createElement('video');
     $video.srcObject = stream;
@@ -160,7 +225,12 @@ export class App {
     } else {
       $video.setAttribute('data-peer', target);
       const player = this.players.get(target);
-      player.addVideo($video);
+
+      if (objectId != null) {
+        player.objects[objectId].addVideo($video);
+      } else {
+        player.addVideo($video);
+      }
     }
 
     try {
@@ -184,8 +254,53 @@ export class App {
     }
   }
 
-  getPlayerDelegate() {
-    return {
+  async shareScreen(enabled) {
+    const objectId = 'screen';
+
+    if (enabled) {
+      await this.mediasoupClient.shareScreen();
+      const stream = this.mediasoupClient.screenStream;
+
+      if (stream != null) {
+        stream.getVideoTracks()[0].onended = () => {
+          this.shareScreen(false);
+        };
+
+        const screenShare = new SelfScreenShare(
+            this.selfPlayer.id,
+            this.selfPlayer.name,
+            {x: this.selfPlayer.x, y: this.selfPlayer.y},
+            this.getDelegate('screen'),
+        );
+        screenShare.audioEnabled = stream.getAudioTracks()[0] != null;
+        screenShare.videoEnabled = stream.getVideoTracks()[0] != null;
+
+        this.selfPlayer.objects[objectId] = screenShare;
+
+        this.socket.send(['add', objectId, screenShare.x, screenShare.y]);
+        this.playStream(stream, screenShare);
+
+        document.querySelector('button.screenshare').classList.add('enabled');
+      }
+    } else {
+      if (this.mediasoupClient.screenStream != null) {
+        const tracks = this.mediasoupClient.screenStream.getTracks();
+        tracks.forEach((track) => track.stop());
+        this.mediasoupClient.screenStream = null;
+      }
+
+      this.socket.send(['remove', objectId]);
+
+      const screenShare = this.selfPlayer.objects[objectId];
+      screenShare.$elem.remove();
+      delete this.selfPlayer.objects[objectId];
+
+      document.querySelector('button.screenshare').classList.remove('enabled');
+    }
+  }
+
+  getDelegate(objectId) {
+    const delegate = {
       calcVolume: (player) => {
         if (player.broadcast) {
           return 1;
@@ -207,23 +322,39 @@ export class App {
 
         return scale;
       },
-      pause: (id) => {
+    };
+
+    if (objectId == null) {
+      delegate.pause = (id) => {
         this.socket.send(['pause', null, id]);
-      },
-      resume: (id) => {
+      };
+
+      delegate.resume = (id) => {
         this.socket.send(['resume', null, id]);
-      },
-      position: (x, y) => {
-        this.socket.send(['pos', x, y]);
-      },
-      update: (name, audio, video, broadcast) => {
+      };
+
+      delegate.update = (name, audio, video, broadcast) => {
         this.socket.send(['update', name, audio, video, broadcast]);
-      },
-      updatePlayers: () => {
+      };
+
+      delegate.updatePlayers = () => {
         for (const player of this.players.values()) {
           player.setPosition(player.x, player.y);
+
+          for (const object of Object.values(player.objects)) {
+            object.setPosition(object.x, object.y);
+          }
         }
-      },
+      };
+    } else {
+      delegate.pause = delegate.resume = delegate.update = delegate.updatePlayers = () => {};
+    }
+
+    delegate.position = (x, y) => {
+      this.socket.send(['pos', objectId, x, y]);
     };
+
+
+    return delegate;
   };
 }

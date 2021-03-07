@@ -27,7 +27,7 @@ html, body {
   position: absolute;
   width: 125px;
   height: 125px;
-  transform: translate3d(var(--translate-x), var(--translate-y), 0px) scale(var(--scale));
+  transform: translate3d(calc(var(--translate-x) - 50%), calc(var(--translate-y) - 50%), 0px) scale(var(--scale));
   -webkit-backface-visibility: hidden;
   backface-visibility: hidden;
 
@@ -37,6 +37,7 @@ html, body {
   text-align: center;
   line-height: 125px;
   will-change: transform;
+  z-index: 4;
 }
 
 .player * {
@@ -146,6 +147,33 @@ html, body {
 .player:not(.audio-enabled) .icon::after {
   content: 'mic_off';
 }
+
+.player.screen {
+  width: auto;
+  height: auto;
+  transform: translate3d(calc(var(--translate-x) - 50%), calc(var(--translate-y) - 50%), 0px);
+  z-index: 3;
+  line-height: 1;
+  font-size: 1rem;
+}
+
+.player.screen video {
+  object-fit: contain;
+}
+
+.player.screen video { 
+  position: relative;
+  top: none;
+  left: none;
+  border-radius: .675rem;
+  width: 640px;
+  height: auto;
+}
+
+.player.screen .audioRing, .player.screen .avatar, .player.screen .icon {
+  display: none;
+}
+
 
 nav {
   position: absolute;
