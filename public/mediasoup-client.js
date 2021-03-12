@@ -230,7 +230,12 @@ export class MediasoupClient {
 
   async shareScreen() {
     this.screenStream = await navigator.mediaDevices.getDisplayMedia({
-      audio: true,
+      audio: {
+        autoGainControl: false,
+        echoCancellation: false,
+        googAutoGainControl: false,
+        noiseSuppression: false,
+      },
       video:
       {
         displaySurface: 'monitor',
