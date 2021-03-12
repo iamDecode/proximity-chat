@@ -60,6 +60,7 @@ html, body {
   border-radius: 100%;
   border: 2px solid white;
   pointer-events: none;
+  box-shadow: 0 0 25px rgba(40, 47, 60, .2), 0 20px 25px rgba(40, 47, 60, .2), 0 3px 4px rgba(40, 47, 60, .2);
 }
 
 .player .audioRing {
@@ -159,15 +160,13 @@ html, body {
 
 .player.screen video {
   object-fit: contain;
-}
-
-.player.screen video { 
   position: relative;
   top: none;
   left: none;
   border-radius: .675rem;
   width: 640px;
   height: auto;
+  box-shadow: 0 0 25px rgba(40, 47, 60, .2), 0 20px 25px rgba(40, 47, 60, .2), 0 3px 4px rgba(40, 47, 60, .2);
 }
 
 .player.screen .audioRing, .player.screen .avatar, .player.screen .icon {
