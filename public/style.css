@@ -92,7 +92,6 @@ html, body {
   border: 2px solid white;
   opacity: 0;
   will-change: opacity;
-  pointer-events: none;
 }
 
 .player.video-enabled video, .player.broadcast-enabled video {
