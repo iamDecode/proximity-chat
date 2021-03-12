@@ -8,6 +8,8 @@ import {attachSinkId} from './utils.js';
 // Config
 const SOUND_CUTOFF_RANGE = 350;
 const SOUND_NEAR_RANGE = 200;
+const SCREEN_SOUND_CUTOFF_RANGE = 600;
+const SCREEN_SOUND_NEAR_RANGE = 400;
 
 
 export class App {
@@ -306,17 +308,28 @@ export class App {
           return 1;
         }
 
+        const NEAR = (objectId == null) ? SOUND_NEAR_RANGE : SCREEN_SOUND_NEAR_RANGE;
+        const CUTFOFF = (objectId == null) ? SOUND_CUTOFF_RANGE : SCREEN_SOUND_CUTOFF_RANGE;
+
         // calulate angle and distance from listener to sound
         const dist = Math.hypot(player.y - this.selfPlayer.y, player.x - this.selfPlayer.x);
-        const scale = 1 - (dist - SOUND_NEAR_RANGE) / (SOUND_CUTOFF_RANGE - SOUND_NEAR_RANGE);
+        const scale = 1 - (dist - NEAR) / (CUTFOFF - NEAR);
 
         // target is too far away, no volume
-        if (dist > SOUND_CUTOFF_RANGE) {
+        if (dist > CUTFOFF) {
           return 0;
         }
 
+        // Limit screen volume to 0.25
+        if (objectId != null) {
+          if (dist < NEAR) {
+            return 0.25;
+          }
+          return scale * 0.25;
+        }
+
         // target is very close, max volume
-        if (dist < SOUND_NEAR_RANGE) {
+        if (dist < NEAR) {
           return 1;
         }
 

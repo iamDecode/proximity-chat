@@ -164,10 +164,12 @@ export class Player {
         }
       }
 
-      const data = new Uint8Array(this.analyser.frequencyBinCount);
-      this.analyser.getByteFrequencyData(data);
+      if (this.analyser != null) {
+        const data = new Uint8Array(this.analyser.frequencyBinCount);
+        this.analyser.getByteFrequencyData(data);
 
-      this.drawAudioRing(data);
+        this.drawAudioRing(data);
+      }
     }
   }
 }
