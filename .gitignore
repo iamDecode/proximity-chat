@@ -1,5 +1,3 @@
 node_modules/
+cert/
 package-lock.json
-cert.pem
-key.pem
-csr.pem

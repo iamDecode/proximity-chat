@@ -22,7 +22,7 @@ For local development you need to generate a self-signed certificate as voice me
 
 With those files, you can run the server using:
 
-    export SSL_CERT_PATH="./cert.pem" SSL_KEY_PATH="./key.pem"
+    export SSL_CERT_PATH="./cert/cert.pem" SSL_KEY_PATH="./cert/key.pem"
     
 Or to wherever the key files are located on your production server.
 
@@ -35,7 +35,7 @@ For running in production, make sure to set the `ANNOUNCED_IP` environmental var
 Proximity Chat can run in a Docker container. Use the following steps to build and run using Docker:
 
     docker build -t proximity-chat .
-    docker run -d -p 3000:3000 -p 9001:9001 -v "/$(pwd)\public":/usr/src/app/public:ro -e SSL_CERT_PATH="./cert.pem" -e SSL_KEY_PATH="./key.pem" proximity-chat
+    docker run -d -p 3000:3000 -p 9001:9001 -v "/$(pwd)\public":/usr/src/app/public:ro -v "/$(pwd)\cert":/usr/src/app/cert:ro -e SSL_CERT_PATH="./cert/cert.pem" -e SSL_KEY_PATH="./cert/key.pem" proximity-chat
 
 This also binds your local `public` directory to the container, so that you can test frontend changes more quickly.
 
