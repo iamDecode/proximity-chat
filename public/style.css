@@ -93,7 +93,7 @@ html, body {
   pointer-events: none;
 }
 
-.player.video-enabled video {
+.player.video-enabled video, .player.broadcast-enabled video {
   opacity: 1;
 }
 
