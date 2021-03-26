@@ -90,6 +90,10 @@ export class App {
         player.videoEnabled = p.videoEnabled;
         player.setBroadcast(p.broadcast);
 
+        if (p.drink) {
+          player.addDrink(p.drink.id, p.drink.time);
+        }
+
         this.players.set(p.id, player);
         this.startCall(p.id);
 
@@ -178,6 +182,14 @@ export class App {
         object.tooltip.tooltip('dispose');
         object.$elem.remove();
         delete player.objects[data.remove.objectId];
+      }
+    }
+
+    // add drinks
+    else if ('drink' in data) {
+      if (this.players.has(data.drink.id)) {
+        const player = this.players.get(data.drink.id);
+        player.addDrink(data.drink.drinkId, data.drink.time);
       }
     }
 

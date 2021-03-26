@@ -50,6 +50,7 @@ class ProximityChatService {
       ws.subscribe('leave');
       ws.subscribe('add');
       ws.subscribe('remove');
+      ws.subscribe('drink');
       ws.subscribe('position');
       ws.subscribe('update');
 
@@ -65,6 +66,7 @@ class ProximityChatService {
               pos: u[1].pos,
               broadcast: u[1].broadcast,
               objects: u[1].objects,
+              drink: u[1].drink,
             })),
       }));
 
@@ -132,6 +134,21 @@ class ProximityChatService {
         },
       }));
       delete user.objects[objectId];
+    }
+
+    if (components[0] == 'drink' && 'drinks' in ROOM_CONFIG) {
+      const dist = Math.hypot(ROOM_CONFIG.drinks.y - user.pos.y, ROOM_CONFIG.drinks.x - user.pos.x);
+      if (dist <= ROOM_CONFIG.drinks.range) {
+        const drinkId = components[1];
+        user.drink = {id: drinkId, time: Date.now()};
+        this.usocket.publish('drink', JSON.stringify({
+          drink: {
+            id: user.id,
+            drinkId: user.drink.id,
+            time: user.drink.time,
+          },
+        }));
+      }
     }
 
     if (components[0] == 'pos') {

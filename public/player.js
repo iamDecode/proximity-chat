@@ -156,6 +156,17 @@ export class Player {
     this.$elem.querySelector('.audioRing').style.setProperty('--volume', width);
   }
 
+  addDrink(id, time) {
+    const classes = {
+      '0': 'glass beer',
+      '1': 'glass wine red',
+      '2': 'glass wine whie',
+    }[id];
+    this.$elem.querySelector('.glass').style.setProperty('--progress', 0);
+    this.$elem.querySelector('.glass').className = classes;
+    this.drinkTime = time;
+  }
+
   render() {
     if (this.stream) {
       if (this.analyser == null) {
@@ -176,6 +187,21 @@ export class Player {
         this.analyser.getByteFrequencyData(data);
 
         this.drawAudioRing(data);
+      }
+    }
+
+    if (this.drinkTime != null) {
+      const passed = Date.now() - this.drinkTime;
+
+      if (passed > document.ROOM_CONFIG.drinks.duration) {
+        this.drinkTime = null;
+        this.$elem.querySelector('.glass').className = 'glass';
+      } else {
+        const ratio = Math.round((1 - (passed / document.ROOM_CONFIG.drinks.duration)) * 100) / 100;
+
+        if (parseFloat(this.$elem.querySelector('.glass').style.getPropertyValue('--progress')) != ratio) {
+          this.$elem.querySelector('.glass').style.setProperty('--progress', ratio);
+        }
       }
     }
   }

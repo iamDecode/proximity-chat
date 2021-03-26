@@ -181,6 +181,8 @@ html, body {
   left: -18px;
   z-index: 10;
   opacity: 0;
+  backface-visibility: hidden;
+  transform: translate3d(0px, 0px, 0.001px);
 }
 
 .player .glass .drink {
@@ -189,7 +191,9 @@ html, body {
   position: absolute;
   width: 40px;
   bottom: 0px;
-  transition: height 1s cubic-bezier(0.32, 0.85, 0.25, 0.99);
+  transition: height 0.8s cubic-bezier(0.32, 0.85, 0.25, 0.99);
+  backface-visibility: hidden;
+  image-rendering: crisp-edges;
 }
 
 .glass.beer {
@@ -497,6 +501,7 @@ nav ul li button:not(.notooltip):hover::after, nav ul li button:not(.notooltip):
 .radial-menu {
   position: absolute;
   margin-left: -190px;
+  margin-top: -40px;
   padding-top: 20px;
   padding-left: 190px;
   width: 380px;
@@ -569,7 +574,7 @@ nav ul li button:not(.notooltip):hover::after, nav ul li button:not(.notooltip):
 
 .radial-menu .glass {
   --progress: 1;
-  width: 40px;
+  width: 41px;
   margin: 15px auto;
 }
 

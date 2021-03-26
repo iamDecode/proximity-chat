@@ -11,5 +11,14 @@
       x: 100,
       y: 100,
     },
+
+    // Optional key to show a menu at the specified location where users can
+    // obtain a drink icon.
+    drinks: {
+      x: 1785,
+      y: 280,
+      range: 400,
+      duration: 1000 * 60 * 10, // in ms
+    },
   };
 })(typeof exports === 'undefined'? document: exports);
