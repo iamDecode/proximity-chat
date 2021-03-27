@@ -67,8 +67,14 @@ export class App {
 
       this.selfPlayer = new SelfPlayer(data.id, name, data.pos, this.playerDelegate);
       this.selfPlayer.stream = stream;
-      this.selfPlayer.audioEnabled = stream.getAudioTracks()[0] != null;
-      this.selfPlayer.videoEnabled = stream.getVideoTracks()[0] != null;
+
+      try {
+        this.selfPlayer.audioEnabled = stream.getAudioTracks()[0] != null;
+        this.selfPlayer.videoEnabled = stream.getVideoTracks()[0] != null;
+      } catch (e) {
+        this.selfPlayer.audioEnabled = false;
+        this.selfPlayer.videoEnabled = false;
+      }
       await this.playStream(stream, this.selfPlayer);
 
       setInterval((_) => {
