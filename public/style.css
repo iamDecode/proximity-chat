@@ -13,7 +13,6 @@ html, body {
 }
 
 #viewport #background {
-  background: url('/public/room/room.png');
   -webkit-backface-visibility: hidden;
   backface-visibility: hidden;
 }

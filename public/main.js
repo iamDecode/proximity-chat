@@ -33,6 +33,7 @@ if (localStorage.getItem('name') == null) {
 
 const $viewport = document.querySelector('#viewport');
 const $bg = document.querySelector('#background');
+$bg.style.backgroundImage = `url('/public/room/${document.ROOM_CONFIG.background}')`;
 const pz = panzoom($bg, {
   zoomSpeed: 0.25,
   bounds: true,
