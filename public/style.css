@@ -222,7 +222,7 @@ html, body {
   background-image: url(/public/assets/wine_drink2.svg);
 }
 
-nav {
+body > nav {
   position: absolute;
   bottom: 20px;
   left: 0;
@@ -239,7 +239,7 @@ nav {
     vertical-align: middle;
 }
 
-nav ul {
+body > nav ul {
   pointer-events: all;
   background:rgba(255, 255, 255, 0.5);
   border-radius: 25px;
@@ -253,13 +253,13 @@ nav ul {
   box-shadow: 0 0 25px rgba(40, 47, 60, .05), 0 20px 25px rgba(40, 47, 60, .05), 0 3px 4px rgba(40, 47, 60, .05);
 }
 
-nav ul li {
+body > nav ul li {
   display: block;
   margin: 0;
   padding: 0;
 }
 
-nav ul li button {
+body > nav ul li button {
   background: none;
   border: none;
   margin: 0 10px;
@@ -273,50 +273,50 @@ nav ul li button {
   position: relative;
 }
 
-nav ul li button:hover {
+.viewport nav ul li button:hover {
   background: rgba(255,255,255,0.1);
 }
 
-nav ul li button:active {
+.viewport nav ul li button:active {
   background: rgba(255,255,255,0.3);
 }
 
 
-nav ul li button.disabled {
+.viewport nav ul li button.disabled {
   color: #ff586d;
 }
 
-nav ul li button.disabled:hover {
+.viewport nav ul li button.disabled:hover {
   background: rgba(255,128,144,0.15);
 }
 
-nav ul li button.disabled:active {
+.viewport nav ul li button.disabled:active {
   background: rgba(255,128,144,0.35);
 }
 
-nav ul li button.enabled {
+.viewport nav ul li button.enabled {
   color: #00d49d;
 }
 
-nav ul li button.enabled:hover {
+.viewport nav ul li button.enabled:hover {
   background: rgba(0,179,133,0.15);
 }
 
-nav ul li button.enabled:active {
+.viewport nav ul li button.enabled:active {
   background: rgba(0,179,133,0.35);
 }
 
-nav ul li button.mic::after { content: 'Mute Microphone'; }
-nav ul li button.cam::after { content: 'Hide Webcam'; }
-nav ul li button.mic.disabled::after { content: 'Unmute Microphone'; }
-nav ul li button.cam.disabled::after { content: 'Show Webcam'; }
-nav ul li button.settings::after { content: 'Settings'; }
-nav ul li button.broadcast::after { content: 'Broadcast'; }
-nav ul li button.broadcast.enabled::after { content: 'Stop Broadcast'; }
-nav ul li button.screenshare::after { content: 'Share screen'; }
-nav ul li button.screenshare.enabled::after { content: 'Stop sharing'; }
+.viewport nav ul li button.mic::after { content: 'Mute Microphone'; }
+.viewport nav ul li button.cam::after { content: 'Hide Webcam'; }
+.viewport nav ul li button.mic.disabled::after { content: 'Unmute Microphone'; }
+.viewport nav ul li button.cam.disabled::after { content: 'Show Webcam'; }
+.viewport nav ul li button.settings::after { content: 'Settings'; }
+.viewport nav ul li button.broadcast::after { content: 'Broadcast'; }
+.viewport nav ul li button.broadcast.enabled::after { content: 'Stop Broadcast'; }
+.viewport nav ul li button.screenshare::after { content: 'Share screen'; }
+.viewport nav ul li button.screenshare.enabled::after { content: 'Stop sharing'; }
 
-nav ul li button::after {
+.viewport nav ul li button::after {
   opacity: 0;
   pointer-events: none;
   width: 140px;
@@ -339,7 +339,7 @@ nav ul li button::after {
   transform: translate3d(0px,5px,0px) scale(0.97);
 }
 
-nav ul li button::before {
+.viewport nav ul li button::before {
   content: " ";
   opacity: 0;
   pointer-events: none;
@@ -354,18 +354,10 @@ nav ul li button::before {
   transform: translate3d(0px,5px,0px);
 }
 
-nav ul li button:not(.notooltip):hover::after, nav ul li button:not(.notooltip):hover::before {
+.viewport nav ul li button:not(.notooltip):hover::after, 
+.viewport nav ul li button:not(.notooltip):hover::before {
   opacity: 1;
   transform: translate3d(0px,0px,0px);
-}
-
-@supports (-webkit-appearance: none) {
-  nav ul {
-    -webkit-backdrop-filter: saturate(180%) blur(10px);
-    backdrop-filter: saturate(180%) blur(10px);
-    /*background:rgba(0, 0, 0, 0.5)*/
-    background:rgba(255, 255, 255, 0.25);
-  }
 }
 
 .broadcast:not(.enabled) i {
@@ -602,4 +594,81 @@ i.icons.beer {
 }
 i.icons.wine {
   background-image: url(/public/assets/wine_glass.svg);
+}
+
+body > aside {
+  position: absolute;
+  left: 0;
+  top: 20px;
+  bottom: 20px;
+  border-radius: 0px 0.675rem 0.675rem 0px;
+  width: 280px;
+  transform: translate3d(-280px, 0px, 0px);
+  transition: transform 0.3s cubic-bezier(0.32, 0.85, 0.25, 0.99);
+  background: rgba(255,255,255,0.75);
+  box-shadow: 0 0 25px rgba(40, 47, 60, .05), 0 20px 25px rgba(40, 47, 60, .05), 0 3px 4px rgba(40, 47, 60, .05);
+}
+
+body > aside > label {
+  text-transform: uppercase;
+  font-size: 13px;
+  font-weight: bold;
+}
+
+body > aside.show {
+  transform: translate3d(0px, 0px, 0px);
+}
+
+body > aside > .toggle {
+  top: 0;
+  bottom: 0;
+  position: absolute;
+  right: -14px;
+  width: 14px;
+  z-index: 999;
+  cursor: e-resize;
+}
+
+body > aside .nav-link:not(.active) {
+  color: #3b4048 !important;
+}
+
+body > aside.show > .toggle {
+  cursor: w-resize;
+}
+
+body > aside > .toggle::after {
+  content: "";
+  position: absolute;
+  z-index: 2;
+  right: 0px;
+  top: 50%;
+  margin-top: -15px;
+  width: 6px;
+  height: 30px;
+  border-radius: 4px;
+  background-color: #6e849a;
+  background-image: linear-gradient(-180deg,rgba(110,132,154,.85),#6e849a);
+  transition: right .12s linear, opacity .12s linear;
+
+  opacity: .5;
+}
+
+body > aside > .toggle:hover::after {
+  background-image: linear-gradient(-180deg,#4e6ff9,#3153e4 78%);
+  opacity: 1;
+}
+
+@supports (-webkit-appearance: none) {
+  body > nav ul {
+    -webkit-backdrop-filter: saturate(180%) blur(10px);
+    backdrop-filter: saturate(180%) blur(10px);
+    background:rgba(255, 255, 255, 0.25);
+  }
+
+  body > aside {
+    -webkit-backdrop-filter: saturate(180%) blur(20px);
+    backdrop-filter: saturate(180%) blur(20px);
+    background:rgba(255, 255, 255, 0.45);
+  }
 }

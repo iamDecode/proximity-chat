@@ -95,6 +95,7 @@ const updateTooltip = (_) => {
 pz.on('pan', updateTooltip);
 pz.on('zoom', updateTooltip);
 
+// Drinks menu
 const isTouchDevice = 'ontouchstart' in document.documentElement;
 if ('drinks' in document.ROOM_CONFIG) {
   const $menu = document.querySelector('.radial-menu');
@@ -130,6 +131,30 @@ if ('drinks' in document.ROOM_CONFIG) {
       $menu.querySelector('.menu-open').checked = false;
     });
   });
+}
+
+// Side menu
+const $menu = document.querySelector('body > aside');
+$menu.querySelector('.toggle').onclick = (e) => {
+  e.preventDefault();
+  $menu.classList.toggle('show');
+}
+for(const room of document.ROOMS) {
+  const $item = document.createElement('li');
+  $item.classList.add('nav-item');
+
+  const $link = document.createElement('a');
+  $link.href = '#';
+  $link.onclick = (e) => {
+    localStorage.setItem('room', room);
+    document.location.reload();
+  };
+  $link.classList.add('nav-link');
+  if (room == localStorage.getItem('room')) $link.classList.add('active');
+  $link.innerHTML = room;
+
+  $item.appendChild($link);
+  document.querySelector('#rooms').appendChild($item);
 }
 
 
