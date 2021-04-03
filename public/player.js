@@ -160,7 +160,7 @@ export class Player {
     const classes = {
       '0': 'glass beer',
       '1': 'glass wine red',
-      '2': 'glass wine whie',
+      '2': 'glass wine white',
     }[id];
     this.$elem.querySelector('.glass').style.setProperty('--progress', 0);
     this.$elem.querySelector('.glass').className = classes;
@@ -192,15 +192,16 @@ export class Player {
 
     if (this.drinkTime != null) {
       const passed = Date.now() - this.drinkTime;
+      const $glass = this.$elem.querySelector('.glass');
 
       if (passed > document.ROOM_CONFIG.drinks.duration) {
         this.drinkTime = null;
-        this.$elem.querySelector('.glass').className = 'glass';
+        $glass.className = 'glass';
       } else {
         const ratio = Math.round((1 - (passed / document.ROOM_CONFIG.drinks.duration)) * 100) / 100;
 
-        if (parseFloat(this.$elem.querySelector('.glass').style.getPropertyValue('--progress')) != ratio) {
-          this.$elem.querySelector('.glass').style.setProperty('--progress', ratio);
+        if (parseFloat($glass.style.getPropertyValue('--progress')) != ratio) {
+          $glass.style.setProperty('--progress', ratio);
         }
       }
     }
