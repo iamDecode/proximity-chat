@@ -3,7 +3,7 @@
 Video chat system with audio volume dependent on your proximity to others. This naturally promotes forming groups, ideal for social gatherings. 
 
 ## Details
-The project uses [peer.js](http://peerjs.com) for WebRTC audio and video sharing. The peer.js server is used for negotiation only, after which audio and video is sent between clients directly. [pixi.js](http://pixijs.io) is used to render the interface with WebGL 2 for performance that will scale for many users, and [pixi-viewport](https://github.com/davidfig/pixi-viewport) used for panning and zooming around the map. Finally, a second [uWebsockets.js](https://github.com/uNetworking/uWebSockets.js) server ensures position broadcasting with the least possible latency.
+The project uses [mediasoup](https://mediasoup.org) for WebRTC audio and video sharing, and using [uWebSockets.js](https://github.com/uNetworking/uWebSockets.js) for the WebRTC signaling, as well as our own additions such as position broadcasting  with the least possible latency.
 
 ## Customizing the room
 The directory `public/room` contains a room config file and a background image.
