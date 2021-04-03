@@ -94,6 +94,7 @@ const updateTooltip = (_) => {
 pz.on('pan', updateTooltip);
 pz.on('zoom', updateTooltip);
 
+const isTouchDevice = 'ontouchstart' in document.documentElement;
 if ('drinks' in document.ROOM_CONFIG) {
   const $menu = document.querySelector('.radial-menu');
   $menu.classList.add('show');
@@ -101,23 +102,32 @@ if ('drinks' in document.ROOM_CONFIG) {
   $menu.style.left = `${document.ROOM_CONFIG.drinks.x}px`;
 
   $menu.ondblclick = (e) => e.stopPropagation();
-  $menu.onclick = (e) => {
-    const dist = Math.hypot(document.ROOM_CONFIG.drinks.y - app.selfPlayer.y, document.ROOM_CONFIG.drinks.x - app.selfPlayer.x);
-    if (dist > document.ROOM_CONFIG.drinks.range) {
-      e.preventDefault();
-      e.stopPropagation();
+  $menu.addEventListener(isTouchDevice ? 'touchend' : 'click', (e) => {
+    const dist = Math.hypot(
+        document.ROOM_CONFIG.drinks.y - app.selfPlayer.y,
+        document.ROOM_CONFIG.drinks.x - app.selfPlayer.x,
+    );
+
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (dist <= document.ROOM_CONFIG.drinks.range) {
+      $menu.querySelector('.menu-open').checked = !$menu.querySelector('.menu-open').checked;
     }
-  };
+  });
 
   $menu.querySelectorAll('.radial-menu .menu-item').forEach((item) => {
-    item.onclick = async (e) => {
-      const dist = Math.hypot(document.ROOM_CONFIG.drinks.y - app.selfPlayer.y, document.ROOM_CONFIG.drinks.x - app.selfPlayer.x);
+    item.addEventListener(isTouchDevice ? 'touchend' : 'click', (e) => {
+      const dist = Math.hypot(
+          document.ROOM_CONFIG.drinks.y - app.selfPlayer.y,
+          document.ROOM_CONFIG.drinks.x - app.selfPlayer.x,
+      );
       if (dist <= document.ROOM_CONFIG.drinks.range) {
         app.selfPlayer.addDrink(item.dataset.id, Date.now());
         app.socket.send(['drink', item.dataset.id]);
       }
       $menu.querySelector('.menu-open').checked = false;
-    };
+    });
   });
 }
 
