@@ -1,7 +1,7 @@
 {
-  "name": "peer-proxmity-voice-demo",
-  "version": "2.0.0",
-  "description": "A demo of a proximity voice chatroom using peerjs",
+  "name": "proxmity-chat",
+  "version": "1.0.1",
+  "description": "Video chat system with audio volume dependent on your proximity to others. This naturally promotes forming groups, ideal for social gatherings.",
   "main": "main.js",
   "scripts": {
     "start": "node --trace-warnings main.js",
@@ -9,8 +9,8 @@
     "lint-fix": "eslint . --fix",
     "gen-ssl-certs": "openssl req -new -newkey rsa:2048 -nodes -keyout ./cert/key.pem -x509 -out ./cert/cert.pem -days 365 -subj /C=NL/ST=NB/L=Eindhoven/O=Disc/CN=www.demos.nl"
   },
-  "author": "Meshiest",
-  "license": "CC0 1.0 Universal",
+  "author": "Dennis Collaris",
+  "license": "SEE LICENSE IN LICENSE",
   "dependencies": {
     "express": "^4.17.1",
     "mediasoup": "^3.6.31",
