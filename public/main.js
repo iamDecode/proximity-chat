@@ -245,7 +245,7 @@ audioInputSelect.onchange = videoSelect.onchange = async (e) => {
 
   const constraints = {
     audio: {deviceId: audioSource ? {exact: audioSource} : undefined},
-    video: {deviceId: videoSource ? {exact: videoSource} : undefined},
+    video: {deviceId: videoSource ? {exact: videoSource} : undefined, width: {exact: 640}, height: {exact: 480}},
   };
   const stream = await app.mediasoupClient.getStream(constraints);
   const audioTrack = stream.getAudioTracks()[0];

@@ -16,7 +16,7 @@ export class MediasoupClient {
     this.producerTransport = await this.initProducerTransport();
 
     try {
-      this.stream = await this.getStream({audio: true, video: true});
+      this.stream = await this.getStream({audio: true, video: {width: {exact: 640}, height: {exact: 480}}});
 
       const video = this.stream.getVideoTracks()[0];
 
@@ -25,9 +25,9 @@ export class MediasoupClient {
 
         // Simulcast
         params.encodings = [
-          {rid: 'r0', maxBitrate: 100000, scalabilityMode: 'S1T3'},
-          {rid: 'r1', maxBitrate: 300000, scalabilityMode: 'S1T3'},
-          {rid: 'r2', maxBitrate: 900000, scalabilityMode: 'S1T3'},
+          {scaleDownResolutionBy: 4, maxBitrate: 100000},
+          {scaleDownResolutionBy: 2, maxBitrate: 300000},
+          {scaleDownResolutionBy: 1, maxBitrate: 900000},
         ];
         params.codecOptions = {
           videoGoogleStartBitrate: 1000,
