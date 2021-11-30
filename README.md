@@ -2,6 +2,8 @@
 
 Video chat system with audio volume dependent on your proximity to others. This naturally promotes forming groups, ideal for social gatherings. 
 
+https://user-images.githubusercontent.com/1223300/144045970-6c81b70b-3337-4c12-b51f-09563d2c3600.mp4
+
 ## Details
 The project uses [mediasoup](https://mediasoup.org) for WebRTC audio and video sharing, and using [uWebSockets.js](https://github.com/uNetworking/uWebSockets.js) for the WebRTC signaling, as well as our own additions such as position broadcasting  with the least possible latency.
 
