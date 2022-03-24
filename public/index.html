@@ -11,6 +11,10 @@
     <script src="/public/vendor/panzoom.min.js"></script>
 
     <script src="/public/room/config.js"></script>
+    <script>
+      document.ROOMS = Object.keys(document.ROOM_CONFIG);
+      document.ROOM_CONFIG = document.ROOM_CONFIG[localStorage.getItem('room') || Object.keys(document.ROOM_CONFIG)[0]];
+    </script>
   </head>
   <body>
     <div id="viewport">
@@ -30,6 +34,14 @@
       </div>
     </div>
     
+    <aside class="d-flex flex-column p-3">
+      <label>Rooms</label>
+      <ul id="rooms" class="nav nav-pills flex-column mb-auto">
+      </ul>
+
+      <div class="toggle"></div>
+    </aside>
+
     <nav>
       <ul>
         <li><button class="settings"><i class="material-icons">settings</i></button></li>

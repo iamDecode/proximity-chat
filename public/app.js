@@ -20,6 +20,8 @@ export class App {
     this.socket = new Socket(`wss://${location.hostname}:9001`);
     this.socket.onmessage = async (...args) => await this.handleMessage(...args);
     this.socket.onopen = (_) => {
+      this.socket.send(['room', localStorage.getItem('room')]);
+
       this.mediasoupClient = new MediasoupClient(this.socket);
       this.mediasoupClient.init().then((_) => {
         navigator.mediaDevices.enumerateDevices().then(window.gotDevices);

@@ -2,7 +2,7 @@ const {ROOM_CONFIG} = require('./public/room/config');
 
 // Calculate a starting position. Spread out players so joining players don't
 // all start out overlapping each other.
-function calculateStartPosition(nUsers) {
+function calculateStartPosition(room, nUsers) {
   // Approximate radius of player bubble plus some spacing.
   const spreadOutDistance = 150;
 
@@ -11,8 +11,8 @@ function calculateStartPosition(nUsers) {
   const offsetY = nUsers % 4 >= 2; // 3rd and 4th player are offset down.
 
   return {
-    x: ROOM_CONFIG.starting_position.x + offsetX * spreadOutDistance,
-    y: ROOM_CONFIG.starting_position.y + offsetY * spreadOutDistance,
+    x: ROOM_CONFIG[room].starting_position.x + offsetX * spreadOutDistance,
+    y: ROOM_CONFIG[room].starting_position.y + offsetY * spreadOutDistance,
   };
 }
 
@@ -20,6 +20,7 @@ class ProximityChatService {
   constructor(usocket) {
     // track which users are connected
     this.users = {};
+
     // To broadcast, especially in close().
     this.usocket = usocket;
   }
@@ -32,27 +33,34 @@ class ProximityChatService {
       return;
     }
 
-    if (components[0] == 'connect') {
-      const id = ws.id;
-      const pos = calculateStartPosition(Object.keys(this.users).length);
-      const name = components[1];
+    if (components[0] == 'room') {
+      if (components[1] !== '') {
+        ws.room = components[1];
+      }
+      return;
+    }
 
-      console.log('user connected', id);
+    if (components[0] == 'connect') {
+      const name = components[1];
+      const id = ws.id;
+      const pos = calculateStartPosition(ws.room, Object.keys(this.users).length);
+
+      console.log('user connected', id, 'to room', ws.room);
 
       // Tell user his or her id
       ws.send(JSON.stringify({'id': id, 'pos': pos}));
 
       // Tell the other users to connect to this user
-      this.usocket.publish('join', JSON.stringify({join: {id: id, name: name, pos: pos}}));
+      this.usocket.publish(`${ws.room}-join`, JSON.stringify({join: {id: id, name: name, pos: pos}}));
 
       // Let this client listen to join, leave, and position broadcasts
-      ws.subscribe('join');
-      ws.subscribe('leave');
-      ws.subscribe('add');
-      ws.subscribe('remove');
-      ws.subscribe('drink');
-      ws.subscribe('position');
-      ws.subscribe('update');
+      ws.subscribe(`${ws.room}-join`);
+      ws.subscribe(`${ws.room}-leave`);
+      ws.subscribe(`${ws.room}-add`);
+      ws.subscribe(`${ws.room}-remove`);
+      ws.subscribe(`${ws.room}-drink`);
+      ws.subscribe(`${ws.room}-position`);
+      ws.subscribe(`${ws.room}-update`);
 
       // ..and players info
       ws.send(JSON.stringify({
@@ -81,7 +89,7 @@ class ProximityChatService {
         objects: {},
       };
       user.emitPos = (objectId, x, y) => {
-        this.usocket.publish('position', String([id, objectId, x, y]));
+        this.usocket.publish(`${ws.room}-position`, String([id, objectId, x, y]));
       };
 
       this.users[id] = user;
@@ -98,7 +106,7 @@ class ProximityChatService {
       user.audioEnabled = components[2] === 'true';
       user.videoEnabled = components[3] === 'true';
       user.broadcast = components[4] === 'true';
-      this.usocket.publish('update', JSON.stringify({
+      this.usocket.publish(`${ws.room}-update`, JSON.stringify({
         update: {
           id: user.id,
           name: user.name,
@@ -116,7 +124,7 @@ class ProximityChatService {
         pos: {x: user.pos.x, y: user.pos.y},
       };
       user.objects[objectId] = object;
-      this.usocket.publish('add', JSON.stringify({
+      this.usocket.publish(`${ws.room}-add`, JSON.stringify({
         add: {
           id: user.id,
           objectId: objectId,
@@ -127,7 +135,7 @@ class ProximityChatService {
 
     if (components[0] == 'remove') {
       const objectId = components[1];
-      this.usocket.publish('remove', JSON.stringify({
+      this.usocket.publish(`${ws.room}-remove`, JSON.stringify({
         remove: {
           id: user.id,
           objectId: objectId,
@@ -136,12 +144,13 @@ class ProximityChatService {
       delete user.objects[objectId];
     }
 
-    if (components[0] == 'drink' && 'drinks' in ROOM_CONFIG) {
-      const dist = Math.hypot(ROOM_CONFIG.drinks.y - user.pos.y, ROOM_CONFIG.drinks.x - user.pos.x);
-      if (dist <= ROOM_CONFIG.drinks.range) {
+    const config = ROOM_CONFIG[ws.room];
+    if (components[0] == 'drink' && 'drinks' in config) {
+      const dist = Math.hypot(config.drinks.y - user.pos.y, config.drinks.x - user.pos.x);
+      if (dist <= config.drinks.range) {
         const drinkId = components[1];
         user.drink = {id: drinkId, time: Date.now()};
-        this.usocket.publish('drink', JSON.stringify({
+        this.usocket.publish(`${ws.room}-drink`, JSON.stringify({
           drink: {
             id: user.id,
             drinkId: user.drink.id,
@@ -179,7 +188,7 @@ class ProximityChatService {
       console.log('user disconnected', user.id);
 
       // let other users know to disconnect this client
-      this.usocket.publish('leave', JSON.stringify({leave: {id: user.id}}));
+      this.usocket.publish(`${ws.room}-leave`, JSON.stringify({leave: {id: user.id}}));
 
       // remove the user from the users list
       delete this.users[user.id];

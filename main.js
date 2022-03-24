@@ -3,6 +3,7 @@ const {v4: uuidv4} = require('uuid');
 const express = require('express');
 const {ProximityChatService} = require('./proximity-chat-service');
 const {MediasoupService} = require('./mediasoup-service');
+const {ROOM_CONFIG} = require('./public/room/config');
 
 const uws = require('uWebSockets.js');
 
@@ -45,20 +46,28 @@ httpServices.get('/', (req, res) => {
   res.sendFile(__dirname + '/public/index.html');
 });
 
-const pcService = new ProximityChatService(socketServer);
-const msService = new MediasoupService(socketServer);
+
+const services = new Map(Object.keys(ROOM_CONFIG).map((room) => {
+  return [room, {
+    pcService: new ProximityChatService(socketServer, room),
+    msService: new MediasoupService(socketServer, room),
+  }];
+}));
 
 socketServer.ws('/*', {
   open: async (ws) => {
     ws.id = uuidv4();
+    ws.room = Object.keys(ROOM_CONFIG)[0];
   },
   message: async (...args) => {
-    await pcService.message(...args);
-    await msService.message(...args);
+    const ws = args[0];
+    await services.get(ws.room).pcService.message(...args);
+    await services.get(ws.room).msService.message(...args);
   },
   close: async (...args) => {
-    await pcService.close(...args);
-    await msService.close(...args);
+    const ws = args[0];
+    await services.get(ws.room).pcService.close(...args);
+    await services.get(ws.room).msService.close(...args);
   },
 });
 
